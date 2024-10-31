@@ -66,7 +66,7 @@ workflow:
     - tags
     - test
   tags:
-    - runner1
+    - runner4
 
 语言检测:
   stage: build
@@ -82,7 +82,7 @@ workflow:
     - tags
     - test
   tags:
-    - runner1
+    - runner4
 项目构建:
   stage: build
   needs:
@@ -99,7 +99,7 @@ workflow:
     - tags
     - test
   tags:
-    - runner1
+    - runner4
 构建镜像:
   stage: buildimgs
   needs:
@@ -118,7 +118,7 @@ workflow:
     - tags
     - test
   tags:
-    - runner1  
+    - runner4  
 推送镜像:
   stage: buildimgs
   needs:
@@ -137,7 +137,7 @@ workflow:
     - tags
     - test
   tags:
-    - runner1
+    - runner4
 清理本地镜像:
   stage: buildimgs
   needs:
@@ -155,7 +155,7 @@ workflow:
     - tags
     - test
   tags:
-    - runner1
+    - runner4
 
 修改Charts模板:
   stage: deploy
@@ -211,7 +211,7 @@ workflow:
     - tags
     - test
   tags:
-    - runner1
+    - runner4
   # when: manual
 
 
@@ -234,7 +234,7 @@ workflow:
   only:
     - test
   tags:
-    - runner1
+    - runner4
 
 关闭测试环境:
   stage: deploy
@@ -253,7 +253,7 @@ workflow:
   only:
     - test
   tags:
-    - runner1
+    - runner4
   when: manual
 
 部署到生产环境:
@@ -275,5 +275,5 @@ workflow:
   only:
     - tags
   tags:
-    - runner1
+    - runner4
   when: manual
