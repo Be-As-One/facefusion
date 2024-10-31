@@ -171,9 +171,10 @@ if __name__ == "__main__":
         # url = "https://storage.googleapis.com/for_test_file/image2video/2.png"
         # url = "https://storage.googleapis.com/for_test_file/baby.png"
         input_data = {
-            "detect_id": "rdet:1858795455345848320",
+            "detect_id": "rdet:1858816913103122432",
             "source_url": "https://storage.googleapis.com/for_test_file/image2video/2.png",
             # "target_url": "https://storage.googleapis.com/for_test_file/video/target.mp4"
+            "target_url": None
         }
         
         task_id = task_manager.create_task(client_id, service, module, input_data)
@@ -192,7 +193,7 @@ if __name__ == "__main__":
         input_data = {
             "detect_id": "rdet:1858795455345848320",
             "source_url": "https://storage.googleapis.com/for_test_file/image2video/2.png",
-            # "target_url": "https://storage.googleapis.com/for_test_file/video/target.mp4"
+            "target_url":  None
         }
         
         def run(data):
@@ -209,7 +210,8 @@ if __name__ == "__main__":
 
 
 # 查询任务结果
-# python alert.py --task-id rvfs:1858799414009655296
+# python alert.py --task-id rvfs:1858817085455462400
+# python alert.py --task-id rdet:1858813680095850496
 
 # 创建新任务
 # python alert.py --action create
