@@ -106,7 +106,7 @@ def generate_gcs_file_path(unique_id=None, extension=None):
     生成GCS文件路径: mtask_storage/队列名/日期/任务id.文件后缀
 
     参数:
-    - bucket_name: GCS存储桶名称
+    - bucket_name: GCS存储桶名
     - topic_name: 队列名
     - unique_id: 任务id
     - extension: 文件后缀
@@ -231,7 +231,7 @@ class BaseConsumer:
         从URL下载文件到本地临时目录
         
         Args:
-            url (str): 文件的URL地址
+            url (str): 文件的URL地
             
         Returns:
             str: 下载文件的本地路径
@@ -267,52 +267,83 @@ class BaseConsumer:
             raise
 
     def handle_task_info(self, detect_id, target_url):
-        task_data = task_manager.get_task_result(detect_id)
-        if task_data is None:
-            raise ValueError(f"Task not found for detect_id: {detect_id}")
-        task = task_data.get('data', None)
-        if task is None:
-            raise ValueError(f"Task data is empty for detect_id: {detect_id}")
+        """
+        处理任务信息，获取目标URL和媒体信息
         
-        if task.get('task_status', '').lower() != 'succeeded':
-            raise ValueError(f"Task status is not succeeded for detect_id: {detect_id}")
-        
-        output = task.get('output_data', None)
-        if output is None:
-            raise ValueError(f"invalid detect_id:: {detect_id}")
-        
-        input_url = task.get('input_data', {}).get('url', '')
-        if input_url == '':
-            logger.error(f"source_url is empty for detect_id: {detect_id}")
-            raise ValueError(f"invalid detect_id: {detect_id}")
-        
-        convert_url = output.get('convert_url', '')
-        if convert_url == '':
-            if target_url != '' and target_url != input_url:
-                logger.error(f"target_url is not equal to input_url for detect_id: {detect_id}")
-                raise ValueError(f"invalid detect_id: {detect_id}")
-            target_url = input_url
-        else:
-            if target_url == '':
-                # raise ValueError(f"invalid detect_id: {detect_id}")
-                target_url = convert_url
+        Args:
+            detect_id (str): 检测任务ID
+            target_url (str): 目标URL
+            
+        Returns:
+            tuple: (target_url, media_type, width, height)
+            
+        Raises:
+            ValueError: 当任务数据无效或缺失时
+        """
+        try:
+            # 获取任务数据
+            task_data = task_manager.get_task_result(detect_id)
+            if not task_data:
+                raise ValueError(f"Task not found for detect_id: {detect_id}")
+                
+            # 获取任务详情
+            task = task_data.get('data')
+            if not task:
+                raise ValueError(f"Task data is empty for detect_id: {detect_id}")
+                
+            # 检查任务状态
+            task_status = task.get('task_status', '').lower()
+            if task_status != 'succeeded':
+                raise ValueError(f"Task status is '{task_status}' (not succeeded) for detect_id: {detect_id}")
+                
+            # 获取输出数据
+            output = task.get('output_data')
+            if not output:
+                raise ValueError(f"Output data is missing for detect_id: {detect_id}")
+                
+            # 获取输入URL
+            input_data = task.get('input_data', {})
+            input_url = input_data.get('url')
+            if not input_url:
+                raise ValueError(f"Source URL is missing for detect_id: {detect_id}")
+                
+            # 处理目标URL逻辑
+            convert_url = output.get('convert_url', '')
+            if not convert_url:
+                # 如果没有转换URL，使用输入URL
+                if target_url and target_url != input_url:
+                    logger.warning(f"Target URL ({target_url}) differs from input URL ({input_url})")
+                target_url = input_url
             else:
-                if target_url != convert_url:
-                    logger.warning(f"target_url is not equal to convert_url for detect_id: {detect_id}")
-                    # raise ValueError(f"invalid detect_id: {detect_id}")
-
-        media_type = output.get('media_type', '')
-        if media_type == '':
-            logger.error(f"media_type is empty for detect_id: {detect_id}")
-            raise ValueError(f"invalid detect_id: {detect_id}")
-
-        width = output.get('width', '')
-        height = output.get('height', '')
-        if width == '' or height == '':
-            logger.error(f"width or height is empty for detect_id: {detect_id}")
-            raise ValueError(f"invalid detect_id: {detect_id}")
-        
-        return target_url, media_type, width, height
+                # 如果有转换URL
+                if not target_url:
+                    target_url = convert_url
+                elif target_url != convert_url:
+                    logger.warning(f"Target URL ({target_url}) differs from convert URL ({convert_url})")
+                    
+            # 获取媒体信息
+            media_type = output.get('media_type', '').lower()
+            if not media_type:
+                raise ValueError(f"Media type is missing for detect_id: {detect_id}")
+                
+            # 获取尺寸信息
+            width = output.get('width')
+            height = output.get('height')
+            if not width or not height:
+                raise ValueError(f"Dimensions (width: {width}, height: {height}) are invalid for detect_id: {detect_id}")
+                
+            logger.info(f"""Task info retrieved successfully:
+                detect_id: {detect_id}
+                target_url: {target_url}
+                media_type: {media_type}
+                dimensions: {width}x{height}
+            """)
+                
+            return target_url, media_type, width, height
+            
+        except Exception as e:
+            logger.error(f"Error processing task info for detect_id {detect_id}: {str(e)}", exc_info=True)
+            raise
 
 
     def get_file_name(self, tpe, task_id, width, height, media_type):
@@ -377,7 +408,8 @@ class BaseConsumer:
                 raise ValueError("Result file not found or empty.")
         finally:
             # 清理临时文件
-            for path in [source_path, target_path, output_path]:
+            temp_files = [source_path, target_path, output_path, gif_output_path]
+            for path in temp_files:
                 if path and os.path.exists(path):
                     try:
                         os.remove(path)
@@ -386,61 +418,13 @@ class BaseConsumer:
                         logger.error(f"Failed to cleanup temporary file {path}: {e}")
 
 
-    def process_message(self, message, resolution):
-        facefusion_type = message['facefusion_type']
-        file_paths = message['file_paths']
-        convert_type = message.get('convert_type', '')
-        logger.info(f"""
-        Processing message: 
-                "facefusion_type": {facefusion_type},
-                "file_paths": {file_paths},
-                "resolution": {resolution},
-                "convert_type": {convert_type}
-                """)
-        os.makedirs(os.path.dirname(file_paths[2]), exist_ok=True)
-        # logger.info(f"-------------> Processing message: {message}")
-        t0 = time.time()
-        path = self.swapper.process(
-            sources=file_paths[0],
-            target=file_paths[1],
-            output=file_paths[2],
-            output_image_resolution=resolution,
-            convert_type=convert_type
-        )
-        # logger.info(f"-------------> Result path: {path}")
-
-        if os.path.exists(path) and os.path.isfile(path) and os.path.getsize(path) > 0:
-            logger.info(f"Result path: {path}")
-        else:
-            logger.error(f"Result file not found or empty, path: {path}")
-            raise ValueError("Result file not found or empty.")
-        # facefusion.globals.output_path
-        if path.startswith(project_name):
-            # 去掉 'data/' 部分并返回剩余部分
-            url = f"{env_gcs_bucket_url}{path}"
-        else:
-            raise ValueError("invild rasult path , Failed to upload to GCS")
-        
-        logger.info(f"----------------> Result URL: {url}")
-        t1 = time.time()
-        logger.info(f"Time taken to process message: {round(t1 - t0, 2)} seconds")
-        return url
-
     def callback(self, message):
-        # 验证服务名称
-        msg_service = message.attributes.get('service')
-        if msg_service != service:
-            logger.error(f"Received message for wrong service. Expected: {service}, Got: {msg_service}")
-            message.nack()  # 消息不处理
-            return
-        
         t0 = time.time()
         msg = None
         request_id = None
         acked = False
         task_id = None
         try:
-            
             self.add_count()
             detect_id, source_url, target_url, task_id = self.validate_message(message)
 
@@ -456,7 +440,6 @@ class BaseConsumer:
                 started_at=datetime.now(timezone.utc)
             )
 
-            
             # 将消息添加到未确认消息列表
             self.unacknowledged_messages[message.message_id] = message
 
@@ -477,51 +460,53 @@ class BaseConsumer:
             # url = self.process_message(msg, resolution)
             url = self.process_task(task_id, detect_id, source_url, target_url, message.message_id)
 
-            # 使用 ack_with_response() 进行消息确认
-            ack_future = message.ack_with_response()
-            ack_future.result(timeout=20)
-            acked = True  # 标记消息已确认
-            t1 = time.time()
-            processing_time = round(t1 - t0, 2)
-            self.update_request_status(
-                request_id=request_id,
-                status='succeeded',
-                processing_time=processing_time,
-                result_url=url
-            )
-            task_manager.update_task(
-                task_id=task_id,
-                task_status='succeeded',
-                finished_at=datetime.now(timezone.utc),
-                output_data={
-                    "url": url
-                }
-            )
-            logger.info(f"Ack for message {message.message_id} successful.")
+            # 只有在成功获取URL后才更新状态为成功
+            if url:
+                # 使用 ack_with_response() 进行消息确认
+                ack_future = message.ack_with_response()
+                ack_future.result(timeout=20)
+                acked = True  # 标记消息已确认
+                t1 = time.time()
+                processing_time = round(t1 - t0, 2)
+                
+                # 更新成功态
+                self.update_request_status(
+                    request_id=request_id,
+                    status='succeeded',
+                    processing_time=processing_time,
+                    result_url=url
+                )
+                task_manager.update_task(
+                    task_id=task_id,
+                    task_status='succeeded',
+                    finished_at=datetime.now(timezone.utc),
+                    output_data={
+                        "url": url
+                    }
+                )
+                logger.info(f"Task completed successfully for message {message.message_id}")
+            else:
+                raise ValueError("Process task completed but no URL returned")
 
-            # 从未确认消息列表中移除
-            del self.unacknowledged_messages[message.message_id]
-        
         except TimeoutError as e:
+            logger.error(f"Timeout error for message {message.message_id}: {e}", exc_info=True)
             if request_id is not None:
                 self.update_request_status(
                     request_id=request_id,
                     status='timeout',
-                    error_message=f'process timeout: {e}',
+                    error_message=str(e),
                     processing_time=round(time.time() - t0, 2)
                 )
-            elif task_id is not None:
+            if task_id is not None:
                 task_manager.update_task(
                     task_id=task_id,
                     task_status='timeout',
                     finished_at=datetime.now(timezone.utc),
-                    error_message=f'process timeout: {e}'
+                    task_message=str(e)
                 )
-            else:
-                logger.error(f"-----> invalid message format: {message.data}")
 
-            logger.error(f"Ack timeout for message {message.message_id}.", exc_info=True)
         except Exception as e:
+            logger.error(f"Error processing message {message.message_id}: {e}", exc_info=True)
             if request_id is not None:
                 self.update_request_status(
                     request_id=request_id,
@@ -529,24 +514,24 @@ class BaseConsumer:
                     error_message=str(e),
                     processing_time=round(time.time() - t0, 2)
                 )
-            elif task_id is not None:
+            if task_id is not None:
                 task_manager.update_task(
                     task_id=task_id,
                     task_status='failed',
                     finished_at=datetime.now(timezone.utc),
-                    error_message=str(e)
+                    task_message=str(e)
                 )
-            else:
-                logger.error(f"invalid message format: {message.data}")
-                
-            logger.error(f"Error processing message {message.message_id}: {e}", exc_info=True)
+
         finally:
-            # 确认消息以避免重新进入队列（如果尚未确认）
-            if not acked:
-                message.ack()
-            # 从未确认消息列表中移除
-            if message.message_id in self.unacknowledged_messages:
-                del self.unacknowledged_messages[message.message_id]
+            try:
+                # 确保消息被确认
+                if not acked:
+                    message.ack()
+                # 从未确认消息列表中移除
+                if message.message_id in self.unacknowledged_messages:
+                    del self.unacknowledged_messages[message.message_id]
+            except Exception as e:
+                logger.error(f"Error in cleanup: {e}", exc_info=True)
 
     async def lease_management(self, stop_event):
         while not stop_event.is_set():
