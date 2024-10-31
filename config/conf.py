@@ -1,23 +1,21 @@
 import os
 
-
-
 env_project_id = os.getenv('PROJECT_ID', 'photoart-e9831')
 # pubsub config
 app_env = os.getenv('APP_ENV', 'dev') # dev, test, prod
 if app_env in ['dev']:
     bucket_name = os.getenv('BUCKET_NAME', 'mtask_storage')
     sub_path = os.getenv('SUB_PATH', 'test')
-    facefusion_topic_name = os.getenv('FACEFUSION_TOPIC_NAME', 'mtask-test')
-    facefusion_subscription_name = os.getenv('FACEFUSION_SUBSCRIPTION_NAME', 'mtask-test-sub')
+    facefusion_topic_name = os.getenv('FACEFUSION_TOPIC_NAME', 'mtask-video-faceswap-test')
+    facefusion_subscription_name = os.getenv('FACEFUSION_SUBSCRIPTION_NAME', 'mtask-video-faceswap-test-sub')
     project_name = os.getenv('PROJECT_NAME', 'data')
     base_url = os.getenv('BASE_URL', 'http://35.190.80.13')
     mysql_db_url = os.getenv('MYSQL_DATABASE_URL', r"mysql+pymysql://admin:CKBN\~3)1?{xQ1Z:@35.223.61.68:3306/aipic-test")
 elif app_env in ['test']:
     bucket_name = os.getenv('BUCKET_NAME', 'mtask_storage')
     sub_path = os.getenv('SUB_PATH', 'test')
-    facefusion_topic_name = os.getenv('FACEFUSION_TOPIC_NAME', 'mtask-test')
-    facefusion_subscription_name = os.getenv('FACEFUSION_SUBSCRIPTION_NAME', 'mtask-test-sub')
+    facefusion_topic_name = os.getenv('FACEFUSION_TOPIC_NAME', 'mtask-video-faceswap-test')
+    facefusion_subscription_name = os.getenv('FACEFUSION_SUBSCRIPTION_NAME', 'mtask-video-faceswap-test-sub')
     project_name = os.getenv('PROJECT_NAME', 'testdata')
     base_url = os.getenv('BASE_URL', 'http://35.190.80.13')
     mysql_db_url = os.getenv('MYSQL_DATABASE_URL', r"mysql+pymysql://admin:CKBN\~3)1?{xQ1Z:@10.109.48.3:3306/aipic-test")
@@ -60,3 +58,15 @@ env_min_image_size = int(os.environ.get('MIN_IMAGE_SIZE', 300))
 
 # service name
 service = os.getenv('SERVICE', 'video-faceswap')
+
+
+"""
+异步队列-生产	异步队列-测试
+mtask-file-detect	mtask-file-detect-test
+mtask-video-faceswap	mtask-video-faceswap-test
+mtask-comfy-mix	mtask-comfy-mix-test
+mtask-comfy-repaint	mtask-comfy-repaint-test
+mtask-comfy-baby	mtask-comfy-baby-test
+mtask-comfy-diylab	mtask-comfy-diylab-test
+
+"""
