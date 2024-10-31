@@ -16,7 +16,7 @@
 
 # RUN git clone https://github.com/facefusion/facefusion.git --branch ${FACEFUSION_VERSION} --single-branch .
 
-FROM  us-central1-docker.pkg.dev/photoart-e9831/base-image/facefusion-baseimage:v1.0.1
+FROM  harbor.abcfreemusic.com/vegoo/base-image/facefusion-baseimage:v1.0.1
 RUN apt update && \
     apt install -y supervisor htop
 RUN pip install flask SQLAlchemy pymysql google-cloud-pubsub google-cloud-storage

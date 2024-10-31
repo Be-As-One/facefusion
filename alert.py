@@ -171,7 +171,7 @@ if __name__ == "__main__":
         # url = "https://storage.googleapis.com/for_test_file/image2video/2.png"
         # url = "https://storage.googleapis.com/for_test_file/baby.png"
         input_data = {
-            "detect_id": "rdet:1858502162535936000",
+            "detect_id": "rdet:1858785042231193600",
             "source_url": "https://storage.googleapis.com/for_test_file/image2video/2.png",
             # "target_url": "https://storage.googleapis.com/for_test_file/video/target.mp4"
         }
@@ -209,7 +209,7 @@ if __name__ == "__main__":
 
 
 # 查询任务结果
-# python alert.py --task-id rvfs:1858497977329381376
+# python alert.py --task-id rvfs:1858785392543657984
 
 # 创建新任务
 # python alert.py --action create
