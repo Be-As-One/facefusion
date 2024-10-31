@@ -30,7 +30,7 @@ def convert_mp4(input_mp4, output_file, conversion_type, **kwargs):
     - input_mp4: 输入的 MP4 文件路径。
     - output_file: 输出文件路径。
     - conversion_type: 转换类型 ('gif' 或 'webp')。
-    - kwargs: 其他可选参数（如 fps, lossless, compression_level, quality, loop 等）。
+    - kwargs: 其他可选参数（如 fps, scale, quality 等）。
 
     返回:
     - None
@@ -52,28 +52,25 @@ def convert_mp4(input_mp4, output_file, conversion_type, **kwargs):
             temp_output_file = temp_file.name
 
         if conversion_type == 'gif':
+            # 改进的 GIF 转换命令
             cmd = [
                 'ffmpeg', '-y',
-                '-loglevel', 'error',
                 '-i', input_mp4,
-                '-vf', 'fps=10,scale=320:-1:flags=lanczos',
+                '-vf', 'fps=15,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
                 '-loop', '0',
                 temp_output_file
             ]
         elif conversion_type == 'webp':
-            fps = kwargs.get('fps', 10)
-            lossless = kwargs.get('lossless', 0)
-            compression_level = kwargs.get('compression_level', 4)
-            quality = kwargs.get('quality', 70)
+            fps = kwargs.get('fps', 15)
+            quality = kwargs.get('quality', 80)
             loop = kwargs.get('loop', 0)
             cmd = [
                 'ffmpeg', '-y',
-                '-loglevel', 'error',
                 '-i', input_mp4,
-                '-vf', f"fps={fps}",
-                '-c:v', 'libwebp',
-                '-lossless', str(lossless),
-                '-compression_level', str(compression_level),
+                '-vf', f'fps={fps}',
+                '-vcodec', 'libwebp',
+                '-lossless', '0',
+                '-compression_level', '6',
                 '-q:v', str(quality),
                 '-loop', str(loop),
                 temp_output_file
@@ -83,18 +80,18 @@ def convert_mp4(input_mp4, output_file, conversion_type, **kwargs):
             raise ValueError(f"Unsupported conversion type: {conversion_type}")
 
         logger.info(f"Converting MP4 {input_mp4} to {conversion_type.upper()}, output to {temp_output_file}")
-        result = subprocess.run(cmd, check=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
 
         if result.returncode == 0:
             shutil.move(temp_output_file, output_file)
             logger.info(f"MP4 converted and saved to {output_file}")
         else:
-            raise subprocess.CalledProcessError(result.returncode, cmd)
+            raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
         
         t1 = time.time()
         logger.info(f"MP4 to {conversion_type.upper()} conversion total time: {t1 - t0:.2f}s")
     except subprocess.CalledProcessError as e:
-        logger.error(f"Error converting MP4 to {conversion_type.upper()}: {e}", exc_info=True)
+        logger.error(f"Error converting MP4 to {conversion_type.upper()}: {e.stderr}", exc_info=True)
         if os.path.exists(temp_output_file):
             os.remove(temp_output_file)
         raise e
@@ -340,6 +337,7 @@ class BaseConsumer:
         output_path = None
         output_url = None
         extension = None
+        gif_output_path = None
         try:
             logger.info(f"Processing task: {task_id}, {detect_id}, {source_url}, {target_url}")
             target_url, media_type, width, height = self.handle_task_info(detect_id, target_url)
@@ -361,11 +359,15 @@ class BaseConsumer:
             )
             if os.path.exists(output_path) and os.path.isfile(output_path) and os.path.getsize(output_path) > 0:
                 if media_type.lower() in ['gif']:
-                    convert_mp4(output_path, output_path, "gif")
+                    gif_output_path = f"/tmp/{media_type}-{task_id}-{width}x{height}.gif"
+                    convert_mp4(output_path, gif_output_path, "gif")
                 # 上传到GCS
                 extension = self.get_extension(media_type)
                 gcs_path = generate_gcs_file_path(message_id, extension)
-                f, url = gcs_utils.upload_file(output_path, gcs_path)
+                if gif_output_path: 
+                    f, url = gcs_utils.upload_file(gif_output_path, gcs_path)
+                else:
+                    f, url = gcs_utils.upload_file(output_path, gcs_path)
                 if f:
                     return url
                 else:
