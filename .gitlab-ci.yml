@@ -141,7 +141,7 @@ workflow:
 清理本地镜像:
   stage: buildimgs
   needs:
-    - job: "构建镜像"
+    - job: "推送镜像"
   script:
     - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
     - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
@@ -160,7 +160,7 @@ workflow:
 修改Charts模板:
   stage: deploy
   needs:
-    - job: "构建镜像"
+    - job: "推送镜像"
   script:
     - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
     - PREVIOUS_VERSION=`cat cicd.env |grep PREVIOUS_VERSION|awk -F = '{print $2}'`
