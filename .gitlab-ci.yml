@@ -1,0 +1,279 @@
+stages:          # List of stages for jobs, and their order of execution
+  - checkout
+  - build
+  - buildimgs
+  - deploy
+variables:
+  COMMIT_REF: "${CI_COMMIT_BRANCH}"
+  WORK_DIR: '/home/gitlab-runner/workspace'
+workflow:
+  rules:
+    - if: "$CI_COMMIT_BRANCH == 'test'"
+      variables:
+        ENV: 'test'
+        BRANCH: 'test'
+    - if: "$CI_COMMIT_BRANCH == 'main'"
+      variables:
+        ENV: 'prod'
+        BRANCH: 'main'
+    - if: $CI_COMMIT_TAG
+      variables:
+        ENV: 'prod'
+        BRANCH: 'main'
+代码检出:
+  stage: checkout
+  script:
+    - cd ${WORK_DIR}/${ENV}
+    - echo "正在清理工作区🧹……" && rm -rf ${CI_PROJECT_NAME}
+    - git init
+    - git config user.name "${UV_DEVOPS_USER}"
+    - git config user.password "${UV_DEVOPS_PAT}"
+    - git config credential.helper store
+    - echo "当前分支：${CI_COMMIT_BRANCH}"
+    - echo -e "正在准备从远端仓库拉取代码……" 
+    - time git clone -b ${BRANCH} ${CI_REPOSITORY_URL}
+    - sleep 3
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - |
+      if  [ ${ENV} == 'prod' ];then
+        PREVIOUS_VERSION=`git describe --tags --abbrev=0 $(git rev-parse --abbrev-ref HEAD)~1 --always`
+        if [ -z ${PREVIOUS_VERSION} ];then
+          PREVIOUS_VERSION='v1.0.0'
+        fi
+      elif [ ${ENV} == 'test' ];then
+        PREVIOUS_VERSION=`git log -n 2 --format=%cd --skip=2|awk 'NR==2{print $0}'|sed 's/:/-/g'|sed 's/ /-/g'|sed 's/+/-/g'`
+      fi
+      echo "PREVIOUS_VERSION=${PREVIOUS_VERSION}" >> cicd.env
+    # - echo "上个版本为：${PREVIOUS_VERSION}"
+    - |
+      if [ ${ENV} == 'prod' ];then
+        CURRENT_VERSION=`git describe --tags $(git rev-list --tags --max-count=1)`
+      elif [ ${ENV} == 'test' ];then
+        CURRENT_VERSION=`echo "${CI_COMMIT_TIMESTAMP}"|sed 's/:/-/g'|sed 's/+/-/g'`
+      fi
+      echo "CURRENT_VERSION=${CURRENT_VERSION}" >> cicd.env
+    - echo -e "当前版本为：\033[1;31m${CURRENT_VERSION}\033[0m" 
+    - echo -e "上一个版本为：\033[1;31m${PREVIOUS_VERSION}\033[0m" 
+    - COMMIT_TIME=$(git log -1 --format=%cd)
+    - echo "$CI_COMMIT_TIMESTAMP"
+    - echo "COMMIT_TIME:${COMMIT_TIME}"
+    - echo -e "当前版本的提交信息为：\033[1;31m${CI_COMMIT_MESSAGE}\033[0m"
+    - echo -e "当前版本的提交者为：${CI_COMMIT_AUTHOR}"
+    - echo -e "当前版本的SHA为：\033[1;31m${CI_COMMIT_SHA}\033[0m"
+    - if [ ${ENV} == 'prod' ];then git fetch --tags;fi
+    - if [ ${ENV} == 'prod' ];then git checkout tags/$CI_COMMIT_TAG;fi
+  only:
+    - tags
+    - test
+  tags:
+    - runner1
+
+语言检测:
+  stage: build
+  script:
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
+    - LANGUAGE=$(echo ${CI_PROJECT_REPOSITORY_LANGUAGES}|awk -F , '{print$1}' | tr '[:lower:]' '[:upper:]') && echo "LANGUAGE=${LANGUAGE}" >> cicd.env
+    - echo -e "检测到当前仓库主要的编程语言是：\033[1;31m ${LANGUAGE} \033[0m，即将进入 \033[1;31m ${LANGUAGE} \033[0m 项目构建阶段……"
+    - echo "${CURRENT_VERSION}"
+  variables:
+    GIT_CHECKOUT: false
+  only:
+    - tags
+    - test
+  tags:
+    - runner1
+项目构建:
+  stage: build
+  needs:
+    - job: "代码检出"
+  script:
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - LANGUAGE=`grep 'LANGUAGE' cicd.env |awk -F = '{print $2}'`
+    - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
+    - echo -e "当前仓库的最新版本为：\033[1;31m ${CURRENT_VERSION} \033[0m"
+    - if [ ${LANGUAGE} == 'PHP' ];then echo -e "当前语言为解释性语言，无需预编译，即将进入下一阶段JOB……";fi
+  variables:
+    GIT_CHECKOUT: false
+  only:
+    - tags
+    - test
+  tags:
+    - runner1
+构建镜像:
+  stage: buildimgs
+  needs:
+    - job: "项目构建"
+  script:
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
+    - echo -e "当前项目配置的私有镜像仓库为：\033[1;31m ${UV_HARBOR_HOST} \033[0m，本次构建的镜像将推送至该主机……"
+    - echo ${CURRENT_VERSION}
+    - time sudo docker build -f Dockerfile -t ${UV_HARBOR_HOST}/${CI_PROJECT_NAMESPACE}/${ENV}/${CI_PROJECT_NAME}:${CURRENT_VERSION} .
+    - time sudo docker build -f Dockerfile -t ${UV_HARBOR_HOST}/${CI_PROJECT_NAMESPACE}/${ENV}/${CI_PROJECT_NAME}:latest .
+    - echo -e "镜像\033[1;31m${UV_HARBOR_HOST}/${CI_PROJECT_NAMESPACE}/${ENV}/${CI_PROJECT_NAME}:${CURRENT_VERSION}\033[0m已成功构建🏅"
+  variables:
+    GIT_CHECKOUT: false
+  only:
+    - tags
+    - test
+  tags:
+    - runner1  
+推送镜像:
+  stage: buildimgs
+  needs:
+    - job: "构建镜像"
+  script:
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
+    - sudo docker login -u ${UV_HARBOR_USER} -p ${UV_HARBOR_PWD} ${UV_HARBOR_HOST}
+    - echo  ${CURRENT_VERSION}
+    - time sudo docker push ${UV_HARBOR_HOST}/${CI_PROJECT_NAMESPACE}/${ENV}/${CI_PROJECT_NAME}:${CURRENT_VERSION}
+    - time sudo docker push ${UV_HARBOR_HOST}/${CI_PROJECT_NAMESPACE}/${ENV}/${CI_PROJECT_NAME}:latest
+    - echo -e "镜像\033[1;31m${UV_HARBOR_HOST}/${CI_PROJECT_NAMESPACE}/${ENV}/${CI_PROJECT_NAME}:${CURRENT_VERSION}\033[0m已成功推送到私有仓库🏅"
+  variables:
+    GIT_CHECKOUT: false
+  only:
+    - tags
+    - test
+  tags:
+    - runner1
+清理本地镜像:
+  stage: buildimgs
+  needs:
+    - job: "构建镜像"
+  script:
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
+    - echo  ${CURRENT_VERSION}
+    - time sudo docker rmi ${UV_HARBOR_HOST}/${CI_PROJECT_NAMESPACE}/${ENV}/${CI_PROJECT_NAME}:${CURRENT_VERSION}
+    - time sudo docker rmi ${UV_HARBOR_HOST}/${CI_PROJECT_NAMESPACE}/${ENV}/${CI_PROJECT_NAME}:latest
+    - echo -e "镜像\033[1;31m${UV_HARBOR_HOST}/${CI_PROJECT_NAMESPACE}/${ENV}/${CI_PROJECT_NAME}:${CURRENT_VERSION}\033[0m已从本地镜像库清理🧹"
+  variables:
+    GIT_CHECKOUT: false
+  only:
+    - tags
+    - test
+  tags:
+    - runner1
+
+修改Charts模板:
+  stage: deploy
+  needs:
+    - job: "构建镜像"
+  script:
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - PREVIOUS_VERSION=`cat cicd.env |grep PREVIOUS_VERSION|awk -F = '{print $2}'`
+    - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
+    - echo "正在准备从远程仓库获取Charts模板，请稍后⌛️"
+    - helm registry login ${UV_HARBOR_HOST} -u ${UV_HARBOR_USER} -p ${UV_HARBOR_PWD}
+    - if [ ${ENV} == 'prod' ];then CHART_ENV='prod';else CHART_ENV='test';fi
+    - |
+      for i in ${CHART_ENV};do
+        helm pull oci://${UV_HARBOR_HOST}/charts/${i}/${CI_PROJECT_NAME} --untar
+        echo "${i}环境的Charts模板已成功获取🏅"
+        CHART_VERSION=$(grep '^version' ${CI_PROJECT_NAME}/Chart.yaml | awk -F : '{print $2}')
+        echo "当前Job从远程仓库获取的Charts的版本号为：${CHART_VERSION}"
+        # Charts版本号自动递增⬇️
+        major=$(echo ${CHART_VERSION} | cut -d '.' -f 1)
+        minor=$(echo ${CHART_VERSION} | cut -d '.' -f 2)
+        patch=$(echo ${CHART_VERSION} | cut -d '.' -f 3)
+        if ! [[ ${major} =~ ^[0-9]+$ ]] || ! [[ ${minor} =~ ^[0-9]+$ ]] || ! [[ ${patch} =~ ^[0-9]+$ ]] ; then 
+          echo "Invalid version format" 
+          exit
+        fi
+        patch=$((patch + 1))
+        if [ ${patch} -gt 99 ]; then 
+          patch=0 minor=$((minor + 1))
+          if [ ${minor} -gt 99 ]; then
+            minor=0 major=$((major + 1))
+          fi
+        fi
+        NEW_CHART_VERSION=$major.$minor.$patch
+        echo "新生成的Charts版本为:${NEW_CHART_VERSION}" && echo "NEW_CHART_VERSION-${i}=${NEW_CHART_VERSION}" >> cicd.env
+        sed -i "s#^environment.*#environment: ${i}#g" ${CI_PROJECT_NAME}/values.yaml
+        sed -i "s#^currentAppVersion.*#currentAppVersion: ${CURRENT_VERSION}#g" ${CI_PROJECT_NAME}/values.yaml
+        sed -i "s#^previousAppVersion.*#previousAppVersion: ${PREVIOUS_VERSION}#g" ${CI_PROJECT_NAME}/values.yaml
+        sed -i "s#^appVersion.*#appVersion: ${CURRENT_VERSION}#g" ${CI_PROJECT_NAME}/Chart.yaml
+        sed -i "s#^version.*#version: ${NEW_CHART_VERSION}#g" ${CI_PROJECT_NAME}/Chart.yaml
+        IMG_TAG="`cat ${CI_PROJECT_NAME}/values.yaml|grep '  tag'`"
+        echo "IMG_TAG为：${IMG_TAG}"
+        sed -i "s#${IMG_TAG}#  tag: ${CURRENT_VERSION}#g" ${CI_PROJECT_NAME}/values.yaml
+        helm package ${CI_PROJECT_NAME}
+        echo "正在将${i}环境的Charts包同步至远程仓库，请稍后⌛️"
+        helm push ${CI_PROJECT_NAME}-${NEW_CHART_VERSION}.tgz oci://${UV_HARBOR_HOST}/charts/${i}
+        echo "${i}环境的Charts模板已经成功同步至远程仓库🏅"
+        rm -rf ${CI_PROJECT_NAME}*
+      done
+  variables:
+    GIT_CHECKOUT: false
+  only:
+    - tags
+    - test
+  tags:
+    - runner1
+  # when: manual
+
+
+部署到测试环境:
+  stage: deploy
+  needs:
+    - job: "修改Charts模板"
+  script:
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - NEW_CHART_VERSION=`grep 'NEW_CHART_VERSION-test' cicd.env |awk -F = '{print $2}'`
+    - argocd-cli login ${UV_ARGOCD_HOST} --username admin --password ${UV_ARGOCD_PWD} --grpc-web
+    - argocd-cli app set ${ENV}-${CI_PROJECT_NAME} --parameter replicaCount=1 --grpc-web
+    - |
+      argocd-cli app patch ${ENV}-${CI_PROJECT_NAME} --patch '{"spec": { "source": { "targetRevision": "'${NEW_CHART_VERSION}'" } }}' --type merge --grpc-web
+    - argocd-cli app get ${ENV}-${CI_PROJECT_NAME} --hard-refresh --grpc-web
+    - argocd-cli app sync ${ENV}-${CI_PROJECT_NAME} --revision ${NEW_CHART_VERSION} --grpc-web --apply-out-of-sync-only --async
+    - echo "已同步版本为${NEW_CHART_VERSION}的Charts模板文件，正在后台执行部署任务，完全生效可能需要一到两分钟，请耐心等待应用部署⌛️"
+  variables:
+    GIT_CHECKOUT: false
+  only:
+    - test
+  tags:
+    - runner1
+
+关闭测试环境:
+  stage: deploy
+  needs:
+    - job: "修改Charts模板"
+  script:
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - NEW_CHART_VERSION=`grep 'NEW_CHART_VERSION-test' cicd.env |awk -F = '{print $2}'`
+    - argocd-cli login ${UV_ARGOCD_HOST} --username admin --password ${UV_ARGOCD_PWD} --grpc-web
+    - argocd-cli app set ${ENV}-${CI_PROJECT_NAME} --parameter replicaCount=0 --grpc-web
+    - argocd-cli app sync ${ENV}-${CI_PROJECT_NAME} --revision ${NEW_CHART_VERSION} --grpc-web --apply-out-of-sync-only --async
+    - echo "正在将测试环境的Pod副本数量调整为0，请稍后⌛️"
+    - echo "本次任务操作者为：${GITLAB_USER_NAME}"
+  variables:
+    GIT_CHECKOUT: false
+  only:
+    - test
+  tags:
+    - runner1
+  when: manual
+
+部署到生产环境:
+  stage: deploy
+  needs:
+    - job: "修改Charts模板"
+  script:
+    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
+    - NEW_CHART_VERSION=`grep 'NEW_CHART_VERSION-prod' cicd.env |awk -F = '{print $2}'`
+    - argocd-cli login ${UV_ARGOCD_HOST} --username admin --password ${UV_ARGOCD_PWD} --grpc-web
+    - |
+      argocd-cli app patch ${ENV}-${CI_PROJECT_NAME} --patch '{"spec": { "source": { "targetRevision": "'${NEW_CHART_VERSION}'" } }}' --type merge --grpc-web
+    - argocd-cli app get ${ENV}-${CI_PROJECT_NAME} --hard-refresh --grpc-web
+    - argocd-cli app sync ${ENV}-${CI_PROJECT_NAME} --revision ${NEW_CHART_VERSION} --grpc-web --apply-out-of-sync-only --async
+    - echo "已同步版本为${NEW_CHART_VERSION}的Charts模板文件，正在后台执行部署任务，完全生效可能需要一到两分钟，请耐心等待应用部署⌛️"
+    - echo "本次任务操作者为：${GITLAB_USER_NAME}"
+  variables:
+    GIT_CHECKOUT: false
+  only:
+    - tags
+  tags:
+    - runner1
+  when: manual

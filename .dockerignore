@@ -1,0 +1,13 @@
+
+# 忽略所有的 .git 目录
+.git
+.idea
+.vscode
+*pyc
+datasets
+.assets
+TensorRT-8.6.1.6
+storge
+test
+resize.py
+

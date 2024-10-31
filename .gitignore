@@ -1,0 +1,12 @@
+.assets
+.idea
+.vscode
+*pyc
+*jpeg
+*jpg
+*mp4
+TensorRT-8.6.1.6
+datasetsauth.json
+a.json
+.git_bak
+.git
