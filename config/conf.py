@@ -46,7 +46,6 @@ conn_retry_interval = int(os.getenv('CONN_RETRY_INTERVAL', 5)) # 5 seconds
 ack_deadline_seconds = int(os.getenv('ACK_DEADLINE_SECONDS', max_duration))
 
 # gcs
-bucket_name = os.getenv('BUCKET_NAME', 'aivideo_faceswap_storage')
 env_gcs_bucket_url = os.getenv('GCS_BUCKET_URL', f"https://storage.googleapis.com/{bucket_name}/")
 
 
