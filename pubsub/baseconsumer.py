@@ -115,7 +115,7 @@ def generate_gcs_file_path(unique_id=None, extension=None):
     - 完整的GCS文件路径
     """
     date_path = datetime.utcnow().strftime("%Y%m%d")
-    return f"{bucket_name}/{sub_path}/{date_path}/{unique_id}{extension}"
+    return f"{sub_path}/{date_path}/{unique_id}{extension}"
 
 class BaseConsumer:
     MAX_SIZE = max_file_size  # 500 MB in bytes
