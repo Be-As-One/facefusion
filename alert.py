@@ -10,15 +10,15 @@ class TaskManager:
     def __init__(self):
         self.base_url = base_url
 
+    def _is_server_error(self, status_code):
+        """
+        判断是否为服务器错误(5xx)
+        """
+        return 500 <= status_code < 600
+
     def create_task(self, client_id, service, module, input_data):
         """
-        创建新任务
-
-        :param client_id: 请求方来源 (App用包名，网站用域名)
-        :param service: 服务名
-        :param module: 模块名
-        :param input_data: 输入数据字典
-        :return: 创建的任务ID或None（如果创建失败）
+        创建新任务，遇到5xx错误时重试一次
         """
         url = f"{self.base_url}/task_create"
         
@@ -29,38 +29,37 @@ class TaskManager:
             "input_data": input_data
         }
 
-        logger.info(f"Task create payload: {json.dumps(payload)}")
-
-        try:
-            response = requests.post(url, json=payload)
-            response.raise_for_status()
-            
-            task_data = response.json()
-            logger.info(f"Task created successfully with task_data: {task_data}")
-            response_data = task_data.get('data')
-            task_id = response_data.get('task_id')
-            
-            if task_id:
-                logger.info(f"Task created successfully with ID: {task_id}")
-                return task_id
-            else:
-                logger.error("Task creation response did not include task_id")
-                return None
-        except requests.RequestException as e:
-            logger.error(f"Failed to create task: {str(e)}")
-            return None
+        for attempt in range(2):  # 最多尝试2次（初始 + 1次重试）
+            try:
+                response = requests.post(url, json=payload)
+                if self._is_server_error(response.status_code) and attempt == 0:
+                    logger.warning(f"Server error (5xx) on attempt {attempt + 1}, retrying...")
+                    time.sleep(1)  # 重试前等待1秒
+                    continue
+                    
+                response.raise_for_status()
+                
+                task_data = response.json()
+                response_data = task_data.get('data')
+                task_id = response_data.get('task_id')
+                
+                if task_id:
+                    logger.info(f"Task created successfully with ID: {task_id}")
+                    return task_id
+                else:
+                    logger.error("Task creation response did not include task_id")
+                    return None
+                    
+            except requests.RequestException as e:
+                if attempt == 1 or not self._is_server_error(getattr(e.response, 'status_code', 0)):
+                    logger.error(f"Failed to create task: {str(e)}")
+                    return None
+                logger.warning(f"Server error on attempt {attempt + 1}, retrying...")
+                time.sleep(1)
 
     def update_task(self, task_id, task_status, task_message=None, started_at=None, finished_at=None, output_data=None):
         """
-        更新任务状态
-
-        :param task_id: 任务 ID
-        :param task_status: 任务状态
-        :param task_message: 模块名或其他消息 (可选)
-        :param started_at: 任务开始时间 (可选)
-        :param finished_at: 任务结束时间 (可选)
-        :param output_data: 输出数据字典 (可选)
-        :return: 更新是否成功
+        更新任务状态，遇到5xx错误时重试一次
         """
         url = f"{self.base_url}/task_update/{task_id}"
         
@@ -70,24 +69,31 @@ class TaskManager:
         
         if task_message:
             payload["task_message"] = task_message
-        
         if started_at:
             payload["started_at"] = started_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(started_at, datetime) else started_at
-        
         if finished_at:
             payload["finished_at"] = finished_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(finished_at, datetime) else finished_at
-        
         if output_data:
             payload["output_data"] = output_data
 
-        try:
-            response = requests.post(url, json=payload)
-            response.raise_for_status()
-            logger.info(f"Task update sent successfully for task {task_id}")
-            return True
-        except requests.RequestException as e:
-            logger.error(f"Failed to send task update for task {task_id}: {str(e)}")
-            return False
+        for attempt in range(2):  # 最多尝试2次（初始 + 1次重试）
+            try:
+                response = requests.post(url, json=payload)
+                if self._is_server_error(response.status_code) and attempt == 0:
+                    logger.warning(f"Server error (5xx) on attempt {attempt + 1}, retrying...")
+                    time.sleep(1)
+                    continue
+                    
+                response.raise_for_status()
+                logger.info(f"Task update sent successfully for task {task_id}")
+                return True
+                
+            except requests.RequestException as e:
+                if attempt == 1 or not self._is_server_error(getattr(e.response, 'status_code', 0)):
+                    logger.error(f"Failed to send task update for task {task_id}: {str(e)}")
+                    return False
+                logger.warning(f"Server error on attempt {attempt + 1}, retrying...")
+                time.sleep(1)
 
     def process_task(self, client_id, service, module, input_data, process_func):
         """
@@ -125,23 +131,30 @@ class TaskManager:
 
     def get_task_result(self, task_id):
         """
-        获取任务信息
-
-        :param task_id: 任务 ID
-        :return: 任务信息字典或None（如果获取失败）
+        获取任务信息，遇到5xx错误时重试一次
         """
         url = f"{self.base_url}/task_result/{task_id}"
 
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            
-            task_data = response.json()
-            logger.info(f"Task result retrieved successfully for task {task_id}")
-            return task_data
-        except requests.RequestException as e:
-            logger.error(f"Failed to get task result for task {task_id}: {str(e)}")
-            return None
+        for attempt in range(2):  # 最多尝试2次（初始 + 1次重试）
+            try:
+                response = requests.get(url)
+                if self._is_server_error(response.status_code) and attempt == 0:
+                    logger.warning(f"Server error (5xx) on attempt {attempt + 1}, retrying...")
+                    time.sleep(1)
+                    continue
+                    
+                response.raise_for_status()
+                
+                task_data = response.json()
+                logger.info(f"Task result retrieved successfully for task {task_id}")
+                return task_data
+                
+            except requests.RequestException as e:
+                if attempt == 1 or not self._is_server_error(getattr(e.response, 'status_code', 0)):
+                    logger.error(f"Failed to get task result for task {task_id}: {str(e)}")
+                    return None
+                logger.warning(f"Server error on attempt {attempt + 1}, retrying...")
+                time.sleep(1)
 
 
 task_manager = TaskManager()
