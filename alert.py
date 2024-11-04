@@ -212,8 +212,12 @@ if __name__ == "__main__":
         # current_time = int(time.time())
         # url = "https://storage.googleapis.com/for_test_file/image2video/2.png"
         # url = "https://storage.googleapis.com/for_test_file/baby.png"
+
+        # mkv : rdet:1860288532526919680
+        # avi : rdet:1860288917849239552
+        # mov : rdet:1860291875835998208
         input_data = {
-            "detect_id": "rdet:1858816913103122432",
+            "detect_id": "rdet:1860291875835998208",
             "source_url": "https://storage.googleapis.com/for_test_file/image2video/2.png",
             # "target_url": "https://storage.googleapis.com/for_test_file/video/target.mp4"
             "target_url": None
@@ -232,6 +236,7 @@ if __name__ == "__main__":
         # current_time = int(time.time())
         # url = "https://storage.googleapis.com/for_test_file/image2video/2.png"
         # url = "https://storage.googleapis.com/for_test_file/baby.png"
+
         input_data = {
             "detect_id": "rdet:1858795455345848320",
             "source_url": "https://storage.googleapis.com/for_test_file/image2video/2.png",

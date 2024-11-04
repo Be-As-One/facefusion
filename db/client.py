@@ -242,7 +242,7 @@ class RequestsDatabase:
                 raise e
 
 # 创建数据库连接
-requests_DB_client = RequestsDatabase()
+# requests_DB_client = RequestsDatabase()
 
 
 
@@ -251,8 +251,8 @@ if __name__ == '__main__':
     import time
     # id = requests_DB_client.create_video_detect_request("https://storage.googleapis.com/aipic-test/2024/07/12/aaa.mp4")
     # print("--->", id)
-    id = requests_DB_client.create_video_detect_request("https://storage.googleapis.com/aipic-test/2024/07/12/aaa.mp4", "bucket_subpath/2024/05/16/aaa.mp4")
-    print("--->", id)
+    # id = requests_DB_client.create_video_detect_request("https://storage.googleapis.com/aipic-test/2024/07/12/aaa.mp4", "bucket_subpath/2024/05/16/aaa.mp4")
+    # print("--->", id)
     # time.sleep(6)
     # requests_DB_client.update_video_detect_info(id, "video", 1920, 1080, 1024, "h264", "video", 30, 60)
     # time.sleep(6)
