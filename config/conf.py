@@ -22,11 +22,11 @@ elif app_env in ['test']:
 elif app_env in ['prod', 'production']:
     bucket_name = os.getenv('BUCKET_NAME', 'mtask_storage')
     sub_path = os.getenv('SUB_PATH', 'video-faceswap')
-    facefusion_topic_name = os.getenv('FACEFUSION_TOPIC_NAME', 'facefusion')
-    facefusion_subscription_name = os.getenv('FACEFUSION_SUBSCRIPTION_NAME', 'facefusion-sub')
+    facefusion_topic_name = os.getenv('FACEFUSION_TOPIC_NAME', 'mtask-video-faceswap')
+    facefusion_subscription_name = os.getenv('FACEFUSION_SUBSCRIPTION_NAME', 'mtask-video-faceswap-sub')
     project_name = os.getenv('PROJECT_NAME', 'data')
     base_url = os.getenv('BASE_URL', 'http://10.0.0.120')
-    mysql_db_url = os.getenv('MYSQL_DATABASE_URL', r"mysql+pymysql://admin:CKBN\~3)1?{xQ1Z:@10.109.48.3:3306/aipic-test")
+    mysql_db_url = os.getenv('MYSQL_DATABASE_URL', r"mysql+pymysql://admin:CKBN\~3)1?{xQ1Z:@10.109.48.3:3306/aipic-prod")
 else:
     raise ValueError(f"Invalid APP_ENV: {app_env}")
 
