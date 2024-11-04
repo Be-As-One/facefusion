@@ -4,15 +4,44 @@ from datetime import datetime
 from utils.logger import logger
 import argparse
 import time  # 添加 time 模块的导入
-from config.conf import base_url
+from config.conf import base_url, API_SECRET_KEY, API_SOURCE
+import hmac
+import hashlib
 
 class TaskManager:
     def __init__(self):
         self.base_url = base_url
+        self.secret_key = API_SECRET_KEY
+        self.source = API_SOURCE
+
+    def _generate_signature(self, timestamp):
+        """
+        生成签名串
+        """
+        message = f"{self.source}{timestamp}"
+        signature = hmac.new(
+            self.secret_key.encode('utf-8'),
+            message.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        return signature
+
+    def _get_headers(self):
+        """
+        生成包含签名信息的请求头
+        """
+        timestamp = str(int(time.time()))
+        return {
+            'X-Signature': self._generate_signature(timestamp),
+            'X-Timestamp': timestamp,
+            'X-Source': self.source,
+            'Content-Type': 'application/json'
+        }
 
     def _is_server_error(self, status_code):
         """
         判断是否为服务器错误(5xx)
+
         """
         return 500 <= status_code < 600
 
@@ -31,7 +60,7 @@ class TaskManager:
 
         for attempt in range(2):  # 最多尝试2次（初始 + 1次重试）
             try:
-                response = requests.post(url, json=payload)
+                response = requests.post(url, json=payload, headers=self._get_headers())
                 if self._is_server_error(response.status_code) and attempt == 0:
                     logger.warning(f"Server error (5xx) on attempt {attempt + 1}, retrying...")
                     time.sleep(1)  # 重试前等待1秒
@@ -52,7 +81,7 @@ class TaskManager:
                     
             except requests.RequestException as e:
                 if attempt == 1 or not self._is_server_error(getattr(e.response, 'status_code', 0)):
-                    logger.error(f"Failed to create task: {str(e)}")
+                    logger.error(f"-----------1111> Failed to create task: {str(e)}")
                     return None
                 logger.warning(f"Server error on attempt {attempt + 1}, retrying...")
                 time.sleep(1)
@@ -78,7 +107,7 @@ class TaskManager:
 
         for attempt in range(2):  # 最多尝试2次（初始 + 1次重试）
             try:
-                response = requests.post(url, json=payload)
+                response = requests.post(url, json=payload, headers=self._get_headers())
                 if self._is_server_error(response.status_code) and attempt == 0:
                     logger.warning(f"Server error (5xx) on attempt {attempt + 1}, retrying...")
                     time.sleep(1)
@@ -108,7 +137,7 @@ class TaskManager:
         """
         task_id = self.create_task(client_id, service, module, input_data)
         if not task_id:
-            logger.error(f"Failed to create task")
+            logger.error(f"----> Failed to create task")
             return False
 
         logger.info(f"Task created successfully with ID: {task_id}")
@@ -118,7 +147,7 @@ class TaskManager:
         try:
             output_data = process_func(input_data)
             self.update_task(task_id, "succeeded", module, finished_at=datetime.now(), output_data=output_data)
-            # return True
+            return True
         except Exception as e:
             logger.error(f"Error processing task {task_id}: {str(e)}")
             self.update_task(task_id, "failed", module, finished_at=datetime.now(), output_data={"error": str(e)})
@@ -137,7 +166,7 @@ class TaskManager:
 
         for attempt in range(2):  # 最多尝试2次（初始 + 1次重试）
             try:
-                response = requests.get(url)
+                response = requests.get(url, headers=self._get_headers())
                 if self._is_server_error(response.status_code) and attempt == 0:
                     logger.warning(f"Server error (5xx) on attempt {attempt + 1}, retrying...")
                     time.sleep(1)
