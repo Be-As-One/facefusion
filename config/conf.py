@@ -58,6 +58,9 @@ env_min_image_size = int(os.environ.get('MIN_IMAGE_SIZE', 300))
 # service name
 service = os.getenv('SERVICE', 'video-faceswap')
 
+# API 签名配置
+API_SECRET_KEY = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d"
+API_SOURCE = "service"
 
 """
 异步队列-生产	异步队列-测试
