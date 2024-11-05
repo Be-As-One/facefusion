@@ -1,7 +1,6 @@
 stages:          # List of stages for jobs, and their order of execution
   - checkout
   - build
-  - buildimgs
   - deploy
 variables:
   COMMIT_REF: "${CI_COMMIT_BRANCH}"
@@ -68,42 +67,10 @@ workflow:
   tags:
     - runner4
 
-语言检测:
-  stage: build
-  script:
-    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
-    - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
-    - LANGUAGE=$(echo ${CI_PROJECT_REPOSITORY_LANGUAGES}|awk -F , '{print$1}' | tr '[:lower:]' '[:upper:]') && echo "LANGUAGE=${LANGUAGE}" >> cicd.env
-    - echo -e "检测到当前仓库主要的编程语言是：\033[1;31m ${LANGUAGE} \033[0m，即将进入 \033[1;31m ${LANGUAGE} \033[0m 项目构建阶段……"
-    - echo "${CURRENT_VERSION}"
-  variables:
-    GIT_CHECKOUT: false
-  only:
-    - tags
-    - test
-  tags:
-    - runner4
-项目构建:
+构建镜像:
   stage: build
   needs:
     - job: "代码检出"
-  script:
-    - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
-    - LANGUAGE=`grep 'LANGUAGE' cicd.env |awk -F = '{print $2}'`
-    - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
-    - echo -e "当前仓库的最新版本为：\033[1;31m ${CURRENT_VERSION} \033[0m"
-    - if [ ${LANGUAGE} == 'PHP' ];then echo -e "当前语言为解释性语言，无需预编译，即将进入下一阶段JOB……";fi
-  variables:
-    GIT_CHECKOUT: false
-  only:
-    - tags
-    - test
-  tags:
-    - runner4
-构建镜像:
-  stage: buildimgs
-  needs:
-    - job: "项目构建"
   script:
     - cd ${WORK_DIR}/${ENV}/${CI_PROJECT_NAME}
     - CURRENT_VERSION=`grep 'CURRENT_VERSION' cicd.env |awk -F = '{print $2}'`
@@ -120,7 +87,7 @@ workflow:
   tags:
     - runner4  
 推送镜像:
-  stage: buildimgs
+  stage: build
   needs:
     - job: "构建镜像"
   script:
@@ -139,7 +106,7 @@ workflow:
   tags:
     - runner4
 清理本地镜像:
-  stage: buildimgs
+  stage: build
   needs:
     - job: "推送镜像"
   script:
