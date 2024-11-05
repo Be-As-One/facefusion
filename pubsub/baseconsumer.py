@@ -303,35 +303,34 @@ class BaseConsumer:
                 
             # 获取输入URL
             input_data = task.get('input_data', {})
-            input_url = input_data.get('url')
-            if not input_url:
-                # raise ValueError(f"Source URL is missing for detect_id: {detect_id}")
-                logger.warning(f"Source URL is missing for detect_id: {detect_id}")
-                
-            # 处理目标URL逻辑
-            convert_url = output.get('convert_url', '')
-            if not convert_url:
-                # 如果没有转换URL，使用输入URL
-                # if target_url and target_url != input_url:
-                #     logger.warning(f"Target URL ({target_url}) differs from input URL ({input_url})")
-                # target_url = input_url
-                raise ValueError(f"Convert URL is missing for detect_id: {detect_id}")
-            else:
-                # 如果有转换URL
-                if not target_url:
+            input_url = input_data.get('url', '') 
+            convert_url = output.get('convert_url', '')   
+
+            if not target_url:
+                if convert_url:
                     target_url = convert_url
-                elif target_url != convert_url:
-                    logger.warning(f"Target URL ({target_url}) differs from convert URL ({convert_url})")
-                    
+                else:
+                    target_url = input_url
+            else:
+                if (target_url != input_url) and (target_url != convert_url):
+                    logger.warning(f"Target URL ({target_url}) differs from input URL ({input_url}) or convert URL ({convert_url})")
+               
             # 获取媒体信息
+            duration = output.get('duration', 0)
             media_type = output.get('media_type', '').lower()
             if not media_type:
                 raise ValueError(f"Media type is missing for detect_id: {detect_id}")
+            else:
+                if media_type not in ['video', 'gif', 'image']:
+                    raise ValueError(f"Media type is invalid for detect_id: {detect_id}")
+                if media_type in ['video', 'gif']:
+                    if duration <= 0:
+                        raise ValueError(f"Duration is invalid for detect_id: {detect_id}")
                 
             # 获取尺寸信息
             width = output.get('width')
             height = output.get('height')
-            duration = output.get('duration')
+           
             if not width or not height:
                 raise ValueError(f"Dimensions (width: {width}, height: {height}) are invalid for detect_id: {detect_id}")
                 
