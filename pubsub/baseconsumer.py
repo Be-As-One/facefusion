@@ -305,15 +305,17 @@ class BaseConsumer:
             input_data = task.get('input_data', {})
             input_url = input_data.get('url')
             if not input_url:
-                raise ValueError(f"Source URL is missing for detect_id: {detect_id}")
+                # raise ValueError(f"Source URL is missing for detect_id: {detect_id}")
+                logger.warning(f"Source URL is missing for detect_id: {detect_id}")
                 
             # 处理目标URL逻辑
             convert_url = output.get('convert_url', '')
             if not convert_url:
                 # 如果没有转换URL，使用输入URL
-                if target_url and target_url != input_url:
-                    logger.warning(f"Target URL ({target_url}) differs from input URL ({input_url})")
-                target_url = input_url
+                # if target_url and target_url != input_url:
+                #     logger.warning(f"Target URL ({target_url}) differs from input URL ({input_url})")
+                # target_url = input_url
+                raise ValueError(f"Convert URL is missing for detect_id: {detect_id}")
             else:
                 # 如果有转换URL
                 if not target_url:
@@ -329,6 +331,7 @@ class BaseConsumer:
             # 获取尺寸信息
             width = output.get('width')
             height = output.get('height')
+            duration = output.get('duration')
             if not width or not height:
                 raise ValueError(f"Dimensions (width: {width}, height: {height}) are invalid for detect_id: {detect_id}")
                 
@@ -337,6 +340,7 @@ class BaseConsumer:
                 target_url: {target_url}
                 media_type: {media_type}
                 dimensions: {width}x{height}
+                duration: {duration}
             """)
                 
             return target_url, media_type, width, height
