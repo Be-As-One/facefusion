@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 import json
 from utils.logger import logger
-# from db.client import requests_DB_client
+from db.client import db_client, StatusEnum
 from datetime import datetime
 from datetime import timezone
 
@@ -432,7 +432,13 @@ class BaseConsumer:
             detect_id, source_url, target_url, task_id = self.validate_message(message)
 
             # 创建任务
-            # request_id = requests_DB_client.create_video_face_swap_request()
+            request_id = db_client.create_face_swap_request(
+                detect_id=detect_id,
+                source_map_info=json.dumps({
+                    "source_url": source_url
+                }),
+                target_url=target_url
+            )
             # if request_id is None:
             #     raise ValueError("Failed to start video face swap request")
 
@@ -455,10 +461,10 @@ class BaseConsumer:
             logger.info(f"Lease renewed for message {message.message_id}.")
 
             # Update the database status
-            # self.update_request_status(
-            #     request_id=request_id,
-            #     status='running'
-            # )
+            self.update_request_status(
+                request_id=request_id,
+                status= StatusEnum.running
+            )
 
             # url = self.process_message(msg, resolution)
             url = self.process_task(task_id, detect_id, source_url, target_url, message.message_id)
@@ -473,12 +479,12 @@ class BaseConsumer:
                 processing_time = round(t1 - t0, 2)
                 
                 # 更新成功态
-                # self.update_request_status(
-                #     request_id=request_id,
-                #     status='succeeded',
-                #     processing_time=processing_time,
-                #     result_url=url
-                # )
+                self.update_request_status(
+                    request_id=request_id,
+                    status=StatusEnum.succeeded,
+                    processing_time=processing_time,
+                    result_url=url
+                )
                 task_manager.update_task(
                     task_id=task_id,
                     task_status='succeeded',
@@ -493,13 +499,7 @@ class BaseConsumer:
 
         except TimeoutError as e:
             logger.error(f"Timeout error for message {message.message_id}: {e}", exc_info=True)
-            # if request_id is not None:
-            #     self.update_request_status(
-            #         request_id=request_id,
-            #         status='timeout',
-            #         error_message=str(e),
-            #         processing_time=round(time.time() - t0, 2)
-            #     )
+
             if task_id is not None:
                 task_manager.update_task(
                     task_id=task_id,
@@ -507,22 +507,29 @@ class BaseConsumer:
                     finished_at=datetime.now(timezone.utc),
                     task_message=str(e)
                 )
+            if request_id is not None:
+                self.update_request_status(
+                    request_id=request_id,
+                    status=StatusEnum.timeout,
+                    error_message=str(e),
+                    processing_time=round(time.time() - t0, 2)
+                )
 
         except Exception as e:
             logger.error(f"Error processing message {message.message_id}: {e}", exc_info=True)
-            # if request_id is not None:
-            #     self.update_request_status(
-            #         request_id=request_id,
-            #         status='failed',
-            #         error_message=str(e),
-            #         processing_time=round(time.time() - t0, 2)
-            #     )
             if task_id is not None:
                 task_manager.update_task(
                     task_id=task_id,
                     task_status='failed',
                     finished_at=datetime.now(timezone.utc),
                     task_message=str(e)
+                )
+            if request_id is not None:
+                self.update_request_status(
+                    request_id=request_id,
+                    status=StatusEnum.failed,
+                    error_message=str(e),
+                    processing_time=round(time.time() - t0, 2)
                 )
 
         finally:
@@ -587,17 +594,13 @@ class BaseConsumer:
             self.subscriber.close()
 
     def update_request_status(self, request_id, status, error_message='', result_url='', processing_time=0):
-        pass
-        # try:
-        #     requests_DB_client.update_video_face_swap_request_status(
-        #         request_id=request_id,
-        #         status=status,
-        #         processing_time=processing_time,
-        #         error_message=error_message,
-        #         result_url=result_url
-        #     )
-        # except Exception as db_error:
-        #     logger.error(f"Error updating request status in DB: {db_error}")
+        db_client.update_face_swap_status(
+            request_id=request_id,
+            status=status,
+            processing_time=processing_time,
+            error_message=error_message,
+            result_url=result_url
+        )
 
 
 if __name__ == '__main__':
