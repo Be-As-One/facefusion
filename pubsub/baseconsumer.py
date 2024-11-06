@@ -433,11 +433,11 @@ class BaseConsumer:
 
             # 创建任务
             request_id = db_client.create_face_swap_request(
-                detect_id=detect_id,
+                detect_id=str(detect_id),
                 source_map_info=json.dumps({
                     "source_url": source_url
                 }),
-                target_url=target_url
+                target_url=target_url or ''
             )
             # if request_id is None:
             #     raise ValueError("Failed to start video face swap request")

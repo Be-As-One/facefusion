@@ -44,7 +44,7 @@ CREATE TABLE `filedetecter` (
 -- 创建人脸替换表
 CREATE TABLE `faceswapper` (
     `id` BIGINT NOT NULL COMMENT '十进制雪花算法生成的唯一ID',
-    `detect_id` BIGINT COMMENT '视频检测ID',
+    `detect_id` VARCHAR(128) COMMENT '视频检测ID', 
     `source_map_info` TEXT COMMENT '源图像URL列表',
     `target_url` TEXT COMMENT '目标图像URL',
     `result_url` TEXT COMMENT '结果URL',
@@ -82,7 +82,7 @@ class FileDetector(Base):
     face_positions = Column(Text, comment='人脸位置信息（json）')
     
     # 通用信息
-    media_type = Column(String(20), comment='媒体类型（video, gif, image）')
+    media_type = Column(String(20), comment='媒体类���（video, gif, image）')
     width = Column(Integer, comment='图片宽度（最大 1080）')
     height = Column(Integer, comment='图片高度（最大 1920）')
     file_size = Column(Integer, comment='文件大小（KB，向下取整）')
@@ -108,7 +108,7 @@ class FaceSwapper(Base):
     __tablename__ = 'faceswapper'
 
     id = Column(BigInteger, primary_key=True, comment='十进制雪花算法生成的唯一ID')
-    detect_id = Column(BigInteger, comment='视频检测ID')
+    detect_id = Column(String(128), comment='视频检测ID')
     source_map_info = Column(Text, comment='源图像URL列表')
     target_url = Column(Text, comment='目标图像URL')
     result_url = Column(Text, comment='结果URL')
@@ -258,12 +258,12 @@ class RequestsDatabase:
                 logger.error(f"Error querying File Detect Request: {e}")
                 raise e
 
-    def create_face_swap_request(self, detect_id: int, source_map_info: str, target_url: str):
+    def create_face_swap_request(self, detect_id: str, source_map_info: str, target_url: str):
         """
         创建人脸替换请求
         
         Args:
-            detect_id: 视频检测ID
+            detect_id: 视频检测ID (字符串类型)
             source_map_info: 源图像URL列表（JSON字符串）
             target_url: 目标图像URL
             
@@ -414,7 +414,7 @@ if __name__ == '__main__':
         print("\n=== 测试人脸替换流程 ===")
         try:
             # 1. 首先创建一个检测请求（或使用已有的）
-            detect_id = test_file_detect()
+            detect_id = str(test_file_detect())
             
             # 2. 创建人脸替换请求
             source_map_info = json.dumps({
@@ -425,7 +425,7 @@ if __name__ == '__main__':
                 "source_face_id_list": [[1, 2]]
             })
             
-            swap_id = db.create_face_swap_request(
+            swap_id = db_client.create_face_swap_request(
                 detect_id=detect_id,
                 source_map_info=source_map_info,
                 target_url="https://storage.googleapis.com/targets/video.mp4"
