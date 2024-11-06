@@ -379,7 +379,6 @@ class BaseConsumer:
             target_path = self.get_file_name('target', task_id, width, height, media_type)
             output_path = self.get_file_name('output', task_id, width, height, media_type)
             
-            source_path = self.download_file(source_url, source_path)
             target_path = self.download_file(target_url, target_path)
 
             # logger.info(f"------> Processing task: {task_id}, {detect_id}, {source_path}, {target_path}, {output_path}")
