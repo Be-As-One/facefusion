@@ -8,7 +8,6 @@ from config.conf import base_url, API_SECRET_KEY, API_SOURCE
 import hmac
 import hashlib
 
-
 # base_url = "http://34.8.172.31"
 class TaskManager:
     def __init__(self):
