@@ -9,7 +9,7 @@ import hmac
 import hashlib
 
 
-base_url = "http://34.8.172.31"
+# base_url = "http://34.8.172.31"
 class TaskManager:
     def __init__(self):
         self.base_url = base_url
@@ -259,7 +259,7 @@ if __name__ == "__main__":
 
 
 # 查询任务结果
-# python alert.py --task-id rdet:1860744390490714112
+# python alert.py --task-id rdet:1860961584440930304
 # python alert.py --task-id rdet:1858813680095850496
 
 # 创建新任务
