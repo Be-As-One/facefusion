@@ -25,7 +25,7 @@ elif app_env in ['prod', 'production']:
     facefusion_topic_name = os.getenv('FACEFUSION_TOPIC_NAME', 'mtask-video-faceswap')
     facefusion_subscription_name = os.getenv('FACEFUSION_SUBSCRIPTION_NAME', 'mtask-video-faceswap-sub')
     project_name = os.getenv('PROJECT_NAME', 'data')
-    base_url = os.getenv('BASE_URL', 'http://10.0.0.120')
+    base_url = os.getenv('BASE_URL', 'http://34.8.172.31')
     mysql_db_url = os.getenv('MYSQL_DATABASE_URL', r"mysql+pymysql://admin:CKBN\~3)1?{xQ1Z:@10.109.48.3:3306/aipic-prod")
 else:
     raise ValueError(f"Invalid APP_ENV: {app_env}")
