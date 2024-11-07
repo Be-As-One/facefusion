@@ -18,7 +18,7 @@ elif app_env in ['test']:
     facefusion_subscription_name = os.getenv('FACEFUSION_SUBSCRIPTION_NAME', 'mtask-video-faceswap-test-sub')
     project_name = os.getenv('PROJECT_NAME', 'testdata')
     base_url = os.getenv('BASE_URL', 'http://35.190.80.13')
-    mysql_db_url = os.getenv('MYSQL_DATABASE_URL', r"mysql+pymysql://admin:CKBN\~3)1?{xQ1Z:@10.109.48.3:3306/aipic-test")
+    mysql_db_url = os.getenv('MYSQL_DATABASE_URL', r"mysql+pymysql://admin:CKBN\~3)1?{xQ1Z:@10.109.48.3:3306/aipic-prod")
 elif app_env in ['prod', 'production']:
     bucket_name = os.getenv('BUCKET_NAME', 'mtask_storage')
     sub_path = os.getenv('SUB_PATH', 'video-faceswap')
