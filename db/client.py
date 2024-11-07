@@ -53,6 +53,7 @@ CREATE TABLE `faceswapper` (
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '请求更新时间',
     `processing_time` FLOAT COMMENT '处理时间（秒）',
     `error_message` TEXT COMMENT '错误信息',
+    `source` VARCHAR(100) DEFAULT '' COMMENT '来源',
     
     PRIMARY KEY (`id`),
     INDEX `idx_status` (`status`),
@@ -117,6 +118,7 @@ class FaceSwapper(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now(), comment='请求更新时间')
     processing_time = Column(Float, comment='处理时间（秒）')
     error_message = Column(Text, comment='错误信息')
+    source = Column(String(100), comment='来源', default='')
 
     # 添加索引
     __table_args__ = (
@@ -258,7 +260,7 @@ class RequestsDatabase:
                 logger.error(f"Error querying File Detect Request: {e}")
                 raise e
 
-    def create_face_swap_request(self, detect_id: str, source_map_info: str, target_url: str):
+    def create_face_swap_request(self, detect_id: str, source_map_info: str, target_url: str, source: str = ''):
         """
         创建人脸替换请求
         
@@ -280,7 +282,8 @@ class RequestsDatabase:
                     result_url='',
                     status=StatusEnum.pending,
                     processing_time=0,
-                    error_message=''
+                    error_message='',
+                    source=source
                 )
                 session.add(request)
                 session.commit()
