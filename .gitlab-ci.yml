@@ -196,6 +196,37 @@ workflow:
     - argocd-cli app get ${ENV}-${CI_PROJECT_NAME} --hard-refresh --grpc-web
     - argocd-cli app sync ${ENV}-${CI_PROJECT_NAME} --revision ${NEW_CHART_VERSION} --grpc-web --apply-out-of-sync-only --async
     - echo "已同步版本为${NEW_CHART_VERSION}的Charts模板文件，正在后台执行部署任务，完全生效可能需要一到两分钟，请耐心等待应用部署⌛️"
+    - |
+      # 检查关键资源的同步状态
+      max_attempts=60  # 最多等待10分钟 (60 * 10秒)
+      attempt=0  
+      while [ $attempt -lt $max_attempts ]; do
+        resources=$(argocd-cli app get ${ENV}-${CI_PROJECT_NAME} -o json --grpc-web | jq -r '.status.resources[] | select(.kind=="Deployment" or .kind=="StatefulSet") | .status')  
+        all_synced=true
+        for status in $resources; do
+          if [ "$status" != "Synced" ]; then
+            all_synced=false
+            break
+          fi
+        done
+        health_status=$(argocd-cli app get ${ENV}-${CI_PROJECT_NAME} -o json --grpc-web | jq -r '.status.health.status')
+        echo "关键资源同步状态: $resources, 健康状态: ${health_status}"
+        if [ "$all_synced" = true ] && [ "$health_status" = "Healthy" ]; then
+          echo "✅ 部署成功完成！"
+          MESSAGE=" 应用名称：${CI_PROJECT_NAME}\n 部署环境：${ENV}\n 发布者：${GITLAB_USER_NAME}\n 当前应用状态：${health_status}\n 发布时间：${CI_JOB_STARTED_AT}"
+          curl -X POST "${UV_WEBHOOK_URL}" -H "Content-Type: application/json" -d '{"msg_type": "post", "content": {"post": {"zh_cn": {"title": "'"应用部署状态通知"'", "content": [[{"tag": "text", "text": "'"${MESSAGE}"'"}]]}}}}}'
+          exit 0
+        fi
+        attempt=$((attempt + 1))
+        if [ $attempt -eq $max_attempts ]; then
+          echo "❌ 部署超时，请检查应用状态！"
+          MESSAGE=" 应用名称：${CI_PROJECT_NAME}\n 部署环境：${ENV}\n 发布者：${GITLAB_USER_NAME}\n 当前应用状态：${health_status}\n 发布时间：${CI_JOB_STARTED_AT}"
+          curl -X POST "${UV_WEBHOOK_URL}" -H "Content-Type: application/json" -d '{"msg_type": "post", "content": {"post": {"zh_cn": {"title": "'"应用部署状态通知"'", "content": [[{"tag": "text", "text": "'"${MESSAGE}"'"}]]}}}}}'
+          exit 1
+        fi
+        echo "等待关键资源同步和健康检查... (${attempt}/${max_attempts})"
+        sleep 10
+      done
   variables:
     GIT_CHECKOUT: false
   only:
@@ -237,6 +268,37 @@ workflow:
     - argocd-cli app sync ${ENV}-${CI_PROJECT_NAME} --revision ${NEW_CHART_VERSION} --grpc-web --apply-out-of-sync-only --async
     - echo "已同步版本为${NEW_CHART_VERSION}的Charts模板文件，正在后台执行部署任务，完全生效可能需要一到两分钟，请耐心等待应用部署⌛️"
     - echo "本次任务操作者为：${GITLAB_USER_NAME}"
+    - |
+      # 检查关键资源的同步状态
+      max_attempts=60  # 最多等待10分钟 (60 * 10秒)
+      attempt=0  
+      while [ $attempt -lt $max_attempts ]; do
+        resources=$(argocd-cli app get ${ENV}-${CI_PROJECT_NAME} -o json --grpc-web | jq -r '.status.resources[] | select(.kind=="Deployment" or .kind=="StatefulSet") | .status')  
+        all_synced=true
+        for status in $resources; do
+          if [ "$status" != "Synced" ]; then
+            all_synced=false
+            break
+          fi
+        done
+        health_status=$(argocd-cli app get ${ENV}-${CI_PROJECT_NAME} -o json --grpc-web | jq -r '.status.health.status')
+        echo "关键资源同步状态: $resources, 健康状态: ${health_status}"
+        if [ "$all_synced" = true ] && [ "$health_status" = "Healthy" ]; then
+          echo "✅ 部署成功完成！"
+          MESSAGE=" 应用名称：${CI_PROJECT_NAME}\n 部署环境：${ENV}\n 发布者：${GITLAB_USER_NAME}\n 当前应用状态：${health_status}\n 发布时间：${CI_JOB_STARTED_AT}"
+          curl -X POST "${UV_WEBHOOK_URL}" -H "Content-Type: application/json" -d '{"msg_type": "post", "content": {"post": {"zh_cn": {"title": "'"应用部署状态通知"'", "content": [[{"tag": "text", "text": "'"${MESSAGE}"'"}]]}}}}}'
+          exit 0
+        fi
+        attempt=$((attempt + 1))
+        if [ $attempt -eq $max_attempts ]; then
+          echo "❌ 部署超时，请检查应用状态！"
+          MESSAGE=" 应用名称：${CI_PROJECT_NAME}\n 部署环境：${ENV}\n 发布者：${GITLAB_USER_NAME}\n 当前应用状态：${health_status}\n 发布时间：${CI_JOB_STARTED_AT}"
+          curl -X POST "${UV_WEBHOOK_URL}" -H "Content-Type: application/json" -d '{"msg_type": "post", "content": {"post": {"zh_cn": {"title": "'"应用部署状态通知"'", "content": [[{"tag": "text", "text": "'"${MESSAGE}"'"}]]}}}}}'
+          exit 1
+        fi
+        echo "等待关键资源同步和健康检查... (${attempt}/${max_attempts})"
+        sleep 10
+      done
   variables:
     GIT_CHECKOUT: false
   only:
