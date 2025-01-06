@@ -50,6 +50,5 @@ CMD ["python", "consumer_start.py"]
 # docker run -it --name facefusion --rm --gpus all,capabilities=video -p 7860:7860 -v /mnt/disks/t4/facefusion/datasets:/facefusion/datasets -v storge:/facefusion/.assets  facefusion:2.6.1 bash
 # docker run  -it --name facefusion --gpus all,capabilities=video -p  7860:7860   us-central1-docker.pkg.dev/photoart-e9831/api/facefusion261:v1.0.1 bash
 # python run.py --execution-providers cuda\
-
 # docker tag facefusion261:latest harbor.abcfreemusic.com/vegoo/model/test/video-faceswap:v1.0.1
 # docker push harbor.abcfreemusic.com/vegoo/model/test/video-faceswap:v1.0.1
