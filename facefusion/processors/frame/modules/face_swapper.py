@@ -5,6 +5,7 @@ import numpy
 import onnx
 import onnxruntime
 from onnx import numpy_helper
+import os
 
 import facefusion.globals
 import facefusion.processors.frame.core as frame_processors
@@ -183,16 +184,69 @@ def pre_check() -> bool:
 
 
 def post_check() -> bool:
-	model_url = get_options('model').get('url')
-	model_path = get_options('model').get('path')
-
-	if not facefusion.globals.skip_download and not is_download_done(model_url, model_path):
-		logger.error(wording.get('model_download_not_done') + wording.get('exclamation_mark'), NAME)
+	try:
+		# 获取当前工作目录和环境信息
+		logger.info(f"Current working directory: {os.getcwd()}", NAME)
+		logger.info(f"Environment variables: {dict(os.environ)}", NAME)
+		
+		# 获取模型信息
+		model_url = get_options('model').get('url')
+		model_path = get_options('model').get('path')
+		
+		# 记录模型基本信息
+		logger.info(f"Selected face swapper model: {frame_processors_globals.face_swapper_model}", NAME)
+		logger.info(f"Model URL: {model_url}", NAME)
+		logger.info(f"Model path: {model_path}", NAME)
+		
+		# 检查目录结构
+		model_dir = os.path.dirname(model_path)
+		logger.info(f"Model directory: {model_dir}", NAME)
+		logger.info(f"Model directory exists: {os.path.exists(model_dir)}", NAME)
+		
+		if os.path.exists(model_dir):
+			logger.info(f"Model directory contents: {os.listdir(model_dir)}", NAME)
+		
+		# 检查模型文件
+		logger.info(f"Model file exists: {os.path.exists(model_path)}", NAME)
+		if os.path.exists(model_path):
+			file_size = os.path.getsize(model_path)
+			logger.info(f"Model file size: {file_size} bytes", NAME)
+			logger.info(f"Model file permissions: {oct(os.stat(model_path).st_mode)}", NAME)
+			
+			# 尝试读取文件
+			try:
+				with open(model_path, 'rb') as f:
+					# 只读取前几个字节来验证可读性
+					f.read(1024)
+				logger.info("Successfully read model file", NAME)
+			except Exception as e:
+				logger.error(f"Failed to read model file: {str(e)}", NAME)
+		
+		# 检查下载状态
+		logger.info(f"Skip download flag: {facefusion.globals.skip_download}", NAME)
+		if not facefusion.globals.skip_download:
+			download_status = is_download_done(model_url, model_path)
+			logger.info(f"Download status check result: {download_status}", NAME)
+			
+			if not download_status:
+				error_message = f"{wording.get('model_download_not_done')}{wording.get('exclamation_mark')}"
+				logger.error(error_message, NAME)
+				return False
+				
+		# 检查文件是否存在
+		if not is_file(model_path):
+			error_message = f"{wording.get('model_file_not_present')}{wording.get('exclamation_mark')}"
+			logger.error(error_message, NAME)
+			return False
+			
+		logger.info("Post check completed successfully", NAME)
+		return True
+		
+	except Exception as e:
+		logger.error(f"Error in post_check: {str(e)}", NAME)
+		import traceback
+		logger.error(f"Traceback: {traceback.format_exc()}", NAME)
 		return False
-	if not is_file(model_path):
-		logger.error(wording.get('model_file_not_present') + wording.get('exclamation_mark'), NAME)
-		return False
-	return True
 
 
 def _pre_process(mode : ProcessMode) -> bool:
