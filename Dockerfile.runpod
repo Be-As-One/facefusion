@@ -65,9 +65,9 @@ RUN mkdir -p /app/logs \
     && mkdir -p /app/temp \
     && mkdir -p /app/.assets/models
 
-# 模型文件已经包含在 .assets/models 目录中（通过 Git LFS）
-# 验证模型文件是否存在
-RUN ls -la /app/.assets/models/*.onnx | head -5 || echo "Models will be downloaded at runtime"
+# 模型将在首次使用时自动下载
+# FaceFusion 的 conditional_download 会处理模型下载
+RUN echo "Models will be automatically downloaded on first use"
 
 # 设置权限
 RUN chmod +x /app/runpod_handler.py

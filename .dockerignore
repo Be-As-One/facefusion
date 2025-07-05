@@ -1,0 +1,49 @@
+# Exclude large model files
+.assets/models/*.onnx
+.assets/models/*.hash
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# Tests
+tests/
+test_*.py
+
+# Temporary files
+temp/
+logs/
+*.log
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
