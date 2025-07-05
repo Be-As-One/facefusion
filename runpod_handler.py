@@ -12,6 +12,9 @@ RunPod FaceFusion 人脸交换处理器 - 最终优化版
 ✅ 灵活的配置选项
 """
 
+from download_utils import extract_file_extension, download_file_with_fastapi, FASTAPI_AVAILABLE
+from facefusion.processors.modules import face_swapper
+from facefusion import state_manager
 import logging
 import os
 import shutil
@@ -48,15 +51,13 @@ PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # FaceFusion 核心模块
-from facefusion import state_manager
-from facefusion.processors.modules import face_swapper
 
 # 下载工具模块
-from download_utils import extract_file_extension, download_file_with_fastapi, FASTAPI_AVAILABLE
 
 # ============================================================================
 # 中文化配置类
 # ============================================================================
+
 
 class FaceFusionConfig:
     """
@@ -640,9 +641,9 @@ if __name__ == "__main__":
             }
         }
         
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🎭 FaceFusion 人脸交换系统测试")
-        print("="*60)
+        print("=" * 60)
         
         result = handler(test_job)
         print(f"\n📊 测试结果:")
@@ -655,7 +656,7 @@ if __name__ == "__main__":
         for key, value in stats.items():
             if key not in ['status', 'service', 'version', 'description']:
                 print(f"   {key}: {value}")
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         
     else:
         # 启动 RunPod 服务器

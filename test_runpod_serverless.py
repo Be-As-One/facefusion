@@ -8,7 +8,6 @@ import json
 import time
 import requests
 import os
-from typing import Dict, Any
 
 # 配置
 RUNPOD_API_BASE = "https://api.runpod.ai/v2"
@@ -249,7 +248,7 @@ def test_batch_requests():
     print(f"\n📊 批量测试结果:")
     print(f"成功: {success_count}/{len(test_cases)}")
     print(f"总时间: {total_time:.2f}s")
-    print(f"平均时间: {total_time/len(test_cases):.2f}s")
+    print(f"平均时间: {total_time / len(test_cases):.2f}s")
 
     return success_count == len(test_cases)
 

@@ -182,7 +182,7 @@ def test_input_validation():
         ]
 
         for i, job in enumerate(invalid_jobs):
-            print(f"\n测试无效输入 {i+1}:")
+            print(f"\n测试无效输入 {i + 1}:")
             print(f"输入: {json.dumps(job, indent=2)}")
 
             result = handler(job)
