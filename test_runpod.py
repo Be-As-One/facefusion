@@ -24,7 +24,7 @@ def test_sync_handler():
     print("=" * 50)
 
     try:
-        from runpod_handler import health_check, sync_handler
+        from runpod_handler import health_check, handler
 
         # 测试健康检查
         print("\n1. 测试健康检查...")
@@ -38,15 +38,14 @@ def test_sync_handler():
             "input": {
                 "source_url": "https://example.com/source.jpg",
                 "target_url": "https://example.com/target.jpg",
-                "resolution": "512x512",
-                "media_type": "image"
+                "resolution": "512x512"
             }
         }
 
         print(f"测试输入: {json.dumps(test_job, indent=2)}")
 
         start_time = time.time()
-        result = sync_handler(test_job)
+        result = handler(test_job)
         end_time = time.time()
 
         print(f"处理时间: {end_time - start_time:.2f} 秒")
@@ -76,8 +75,7 @@ def test_async_handler():
             "input": {
                 "source_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=512&h=512&fit=crop&crop=face",
                 "target_url": "https://test.deepswaper.net/_next/image?url=https%3A%2F%2Fcdn-test.deepswaper.net%2F%2Fface-swap%2F2.png&w=256&q=75",
-                "resolution": "256x256",
-                "media_type": "image"
+                "resolution": "256x256"
             }
         }
 
@@ -116,8 +114,7 @@ def test_concurrent_requests():
                 "input": {
                     "source_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=512&h=512&fit=crop&crop=face",
                     "target_url": "https://test.deepswaper.net/_next/image?url=https%3A%2F%2Fcdn-test.deepswaper.net%2F%2Fface-swap%2F2.png&w=256&q=75",
-                    "resolution": "256x256",
-                    "media_type": "image"
+                    "resolution": "256x256"
                 }
             }
             test_jobs.append(job)
@@ -160,7 +157,7 @@ def test_input_validation():
     print("=" * 50)
 
     try:
-        from runpod_handler import sync_handler
+        from runpod_handler import handler
 
         # 测试无效输入
         invalid_jobs = [
@@ -188,10 +185,10 @@ def test_input_validation():
             print(f"\n测试无效输入 {i+1}:")
             print(f"输入: {json.dumps(job, indent=2)}")
 
-            result = sync_handler(job)
+            result = handler(job)
             print(f"结果: {result.get('status', 'unknown')}")
 
-            if result.get('status') == 'error':
+            if result.get('status') in ['失败', 'error']:
                 print(f"错误信息: {result.get('error', 'unknown error')}")
 
         return True
