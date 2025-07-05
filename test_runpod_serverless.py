@@ -11,8 +11,8 @@ import os
 
 # 配置
 RUNPOD_API_BASE = "https://api.runpod.ai/v2"
-RUNPOD_API_KEY = os.getenv('RUNPOD_API_KEY')
-ENDPOINT_ID = os.getenv('RUNPOD_ENDPOINT_ID')
+RUNPOD_API_KEY = os.getenv('RUNPOD_API_KEY',"rpa_8W9X47JJUF1WU00EJXVD4PQCKAOJP9TEORBGRHC40o5xc8")
+ENDPOINT_ID = os.getenv('RUNPOD_ENDPOINT_ID',"ec642a2uobf578")
 
 # 测试用的图片URL
 TEST_IMAGES = {
@@ -66,7 +66,7 @@ def test_sync_request():
             "source_url": TEST_IMAGES["source"],
             "target_url": TEST_IMAGES["target"],
             "resolution": "512x512",
-            "media_type": "image"
+            "model": "inswapper_128_fp16"
         }
     }
 
@@ -118,7 +118,7 @@ def test_async_request():
             "source_url": TEST_IMAGES["source"],
             "target_url": TEST_IMAGES["target"],
             "resolution": "1024x1024",
-            "media_type": "image"
+            "model": "inswapper_128_fp16"
         }
     }
 
@@ -199,19 +199,19 @@ def test_batch_requests():
             "source_url": TEST_IMAGES["source"],
             "target_url": TEST_IMAGES["target"],
             "resolution": "256x256",
-            "media_type": "image"
+            "model": "inswapper_128_fp16"
         },
         {
             "source_url": TEST_IMAGES["source"],
             "target_url": TEST_IMAGES["target"],
             "resolution": "512x512",
-            "media_type": "image"
+            "model": "inswapper_128_fp16"
         },
         {
             "source_url": TEST_IMAGES["source"],
             "target_url": TEST_IMAGES["target"],
             "resolution": "768x768",
-            "media_type": "image"
+            "model": "inswapper_128_fp16"
         }
     ]
 

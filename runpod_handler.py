@@ -12,9 +12,9 @@ RunPod FaceFusion 人脸交换处理器 - 最终优化版
 ✅ 灵活的配置选项
 """
 
-from download_utils import extract_file_extension, download_file_with_fastapi, FASTAPI_AVAILABLE
-from facefusion.processors.modules import face_swapper
 from facefusion import state_manager
+from facefusion.processors.modules import face_swapper
+from facefusion.download import conditional_download
 import logging
 import os
 import shutil
@@ -22,11 +22,11 @@ import sys
 import tempfile
 import time
 import traceback
-import urllib.request  # 保留用于回退方案
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 # ============================================================================
 # 基础配置
@@ -194,11 +194,6 @@ class ProcessingResult:
             result["metadata"] = self.metadata
             
         return result
-
-
-# ============================================================================
-# 注意：下载功能已移至 download_utils.py 模块
-# ============================================================================
 
 
 # ============================================================================
@@ -438,23 +433,30 @@ class FaceFusionHandler:
                 self.logger.info("📥 开始下载输入图片...")
                 
                 try:
-                    # 使用 FastAPI image_service 下载源图片
-                    source_filename = download_file_with_fastapi(source_url, work_dir)
+                    # 使用 FaceFusion 下载源图片
+                    conditional_download(work_dir, [source_url])
+                    source_filename = os.path.basename(urlparse(source_url).path)
+                    if not source_filename or '.' not in source_filename:
+                        source_filename = "source.jpg"
                     source_path = os.path.join(work_dir, source_filename)
                     self.logger.info(f"✅ 源图片下载成功: {source_filename}")
                 except Exception as e:
                     return ProcessingResult(status="失败", error=f"下载源图片失败: {str(e)}")
                 
                 try:
-                    # 使用 FastAPI image_service 下载目标图片
-                    target_filename = download_file_with_fastapi(target_url, work_dir)
+                    # 使用 FaceFusion 下载目标图片
+                    conditional_download(work_dir, [target_url])
+                    target_filename = os.path.basename(urlparse(target_url).path)
+                    if not target_filename or '.' not in target_filename:
+                        target_filename = "target.jpg"
                     target_path = os.path.join(work_dir, target_filename)
                     self.logger.info(f"✅ 目标图片下载成功: {target_filename}")
                 except Exception as e:
                     return ProcessingResult(status="失败", error=f"下载目标图片失败: {str(e)}")
                 
                 # 准备输出路径
-                target_ext = extract_file_extension(target_url)
+                parsed_url = urlparse(target_url)
+                target_ext = os.path.splitext(parsed_url.path)[1] if '.' in parsed_url.path else '.jpg'
                 output_path = os.path.join(work_dir, f"output{target_ext}")
                 
                 # 执行人脸交换
