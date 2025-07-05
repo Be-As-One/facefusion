@@ -16,6 +16,6 @@ jobs:
   - run: pip install flake8-import-order
   - run: pip install mypy
   - run: flake8 facefusion.py install.py
-  - run: flake8 facefusion runpod_handler.py
+  - run: flake8 facefusion
   - run: mypy facefusion.py install.py
-  - run: mypy facefusion runpod_handler.py
+  - run: mypy facefusion
