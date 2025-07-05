@@ -2,7 +2,7 @@
 # 优化的多阶段构建，减少镜像大小并提高性能
 
 # 第一阶段：基础环境（使用 RunPod 的 CUDA 镜像）
-FROM runpod/base:0.4.0-cuda12.4.0 AS base
+FROM runpod/base:0.6.3-cuda12.4.1 AS base
 
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1
