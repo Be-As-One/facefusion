@@ -4,7 +4,6 @@ RunPod Handler 测试脚本
 用于本地测试 RunPod Handler 的功能
 """
 
-import asyncio
 import json
 import logging
 import time

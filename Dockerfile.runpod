@@ -1,0 +1,85 @@
+# RunPod Serverless Dockerfile for FaceFusion
+# 优化的多阶段构建，减少镜像大小并提高性能
+
+# 第一阶段：基础环境（使用 RunPod 的 CUDA 镜像）
+FROM runpod/base:0.4.0-cuda11.8.0 as base
+
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    libc6-dev \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgoogle-perftools4 \
+    libtcmalloc-minimal4 \
+    ffmpeg \
+    wget \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 设置工作目录
+WORKDIR /app
+
+# 第二阶段：依赖安装
+FROM base as dependencies
+
+# 复制依赖文件
+COPY requirements.txt .
+
+# 安装 Python 依赖
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install runpod
+
+# 安装 ONNX Runtime CUDA 版本
+COPY install.py .
+RUN python install.py --onnxruntime cuda --skip-conda
+
+# 第三阶段：应用构建
+FROM dependencies as application
+
+# 复制应用代码
+COPY . .
+
+# 创建必要的目录
+RUN mkdir -p /app/logs \
+    && mkdir -p /app/temp \
+    && mkdir -p /app/.assets/models
+
+# 模型文件已经包含在 .assets/models 目录中（通过 Git LFS）
+# 验证模型文件是否存在
+RUN ls -la /app/.assets/models/*.onnx | head -5 || echo "Models will be downloaded at runtime"
+
+# 设置权限
+RUN chmod +x /app/runpod_handler.py
+
+# 优化内存使用
+ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4
+ENV MALLOC_CONF=background_thread:true,metadata_thp:auto,dirty_decay_ms:30000,muzzy_decay_ms:30000
+
+# 设置 RunPod 环境变量
+ENV RUNPOD_HANDLER_PATH="/app/runpod_handler.py"
+ENV MAX_CONCURRENCY=3
+ENV PYTHONPATH="/app:/app/facefusion:$PYTHONPATH"
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD python -c "from runpod_handler import health_check; print(health_check())"
+
+# 暴露端口（RunPod 会自动处理）
+EXPOSE 8000
+
+# 启动 RunPod Handler
+CMD ["python", "runpod_handler.py"]
