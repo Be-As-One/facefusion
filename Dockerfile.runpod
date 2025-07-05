@@ -2,7 +2,7 @@
 # 优化的多阶段构建，减少镜像大小并提高性能
 
 # 第一阶段：基础环境（使用 RunPod 的 CUDA 镜像）
-FROM runpod/base:0.4.0-cuda11.8.0 as base
+FROM runpod/base:0.4.0-cuda11.8.0 AS base
 
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1
@@ -11,6 +11,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # 安装系统依赖
 RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
     gcc \
     g++ \
     make \
@@ -27,28 +29,33 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     git \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3 /usr/bin/python
 
 # 设置工作目录
 WORKDIR /app
 
 # 第二阶段：依赖安装
-FROM base as dependencies
+FROM base AS dependencies
+
+# 确保 python 命令可用
+RUN ln -sf /usr/bin/python3 /usr/bin/python || true
 
 # 复制依赖文件
 COPY requirements.txt .
 
 # 安装 Python 依赖
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install runpod
+RUN python3 -m pip install --no-cache-dir --upgrade pip && \
+    python3 -m pip install --no-cache-dir -r requirements.txt && \
+    python3 -m pip install runpod
 
 # 安装 ONNX Runtime CUDA 版本
 COPY install.py .
-RUN python install.py --onnxruntime cuda --skip-conda
+COPY facefusion facefusion
+RUN python3 install.py --onnxruntime cuda --skip-conda
 
 # 第三阶段：应用构建
-FROM dependencies as application
+FROM dependencies AS application
 
 # 复制应用代码
 COPY . .
@@ -72,7 +79,7 @@ ENV MALLOC_CONF=background_thread:true,metadata_thp:auto,dirty_decay_ms:30000,mu
 # 设置 RunPod 环境变量
 ENV RUNPOD_HANDLER_PATH="/app/runpod_handler.py"
 ENV MAX_CONCURRENCY=3
-ENV PYTHONPATH="/app:/app/facefusion:$PYTHONPATH"
+ENV PYTHONPATH="/app:/app/facefusion:${PYTHONPATH:-}"
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
@@ -82,4 +89,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
 EXPOSE 8000
 
 # 启动 RunPod Handler
-CMD ["python", "runpod_handler.py"]
+CMD ["python3", "runpod_handler.py"]
