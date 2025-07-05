@@ -197,6 +197,31 @@ class ProcessingResult:
 
 
 # ============================================================================
+# 存储上传功能（使用 fastapi 的存储模块）
+# ============================================================================
+
+def get_storage_manager():
+    """获取存储管理器"""
+    try:
+        # 使用 fastapi 的存储管理器
+        fastapi_path = Path(__file__).parent / 'fastapi'
+        sys.path.insert(0, str(fastapi_path))
+        
+        # 导入并执行初始化函数
+        import main
+        
+        # 初始化存储管理器
+        return main.init_storage()
+    except Exception as e:
+        logging.getLogger("存储管理器").warning(f"⚠️ 存储管理器初始化失败: {str(e)}")
+        return None
+
+
+# 初始化存储管理器
+storage_manager = get_storage_manager()
+
+
+# ============================================================================
 # 资源管理器
 # ============================================================================
 
@@ -321,16 +346,36 @@ def process_face_swap(source_paths: List[str], target_path: str, output_path: st
             output_size = os.path.getsize(output_path)
             logger.info(f"✅ 人脸交换成功完成: {output_path} (耗时 {processing_time:.2f}秒)")
             
+            # 上传到存储桶
+            import uuid
+            timestamp = int(time.time())
+            unique_id = str(uuid.uuid4())[:8]
+            file_ext = os.path.splitext(output_path)[1]
+            destination_path = f"results/{timestamp}_{unique_id}{file_ext}"
+            
+            try:
+                if storage_manager:
+                    storage_url = storage_manager.upload_file(output_path, destination_path)
+                    logger.info(f"📤 结果已上传到存储: {storage_url}")
+                    final_output_path = storage_url
+                else:
+                    logger.warning("⚠️ 存储管理器未配置，返回本地路径")
+                    final_output_path = output_path
+            except Exception as e:
+                logger.warning(f"⚠️ 存储上传失败，返回本地路径: {str(e)}")
+                final_output_path = output_path
+            
             return ProcessingResult(
                 status="成功",
-                output_path=output_path,
+                output_path=final_output_path,
                 processing_time=processing_time,
                 metadata={
                     "输出分辨率": resolution,
                     "使用模型": model_name,
                     "输入文件数量": len(all_files),
                     "输出文件大小": output_size,
-                    "平均处理速度": f"{output_size / processing_time / 1024:.1f} KB/秒"
+                    "平均处理速度": f"{output_size / processing_time / 1024:.1f} KB/秒",
+                    "存储路径": destination_path if 'storage_url' in locals() else None
                 }
             )
         else:

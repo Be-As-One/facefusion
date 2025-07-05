@@ -60,6 +60,9 @@ FROM dependencies AS application
 # 复制应用代码
 COPY . .
 
+# 初始化 git submodules（如果有的话）
+RUN git submodule init && git submodule update --recursive || echo "No submodules found"
+
 # 创建必要的目录
 RUN mkdir -p /app/logs \
     && mkdir -p /app/temp \
