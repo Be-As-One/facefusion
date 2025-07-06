@@ -17,7 +17,7 @@ ENDPOINT_ID = os.getenv('RUNPOD_ENDPOINT_ID',"xmqad33xu4v2pv")
 # 测试用的图片URL
 TEST_IMAGES = {
     "source": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=512&h=512&fit=crop&crop=face",
-    "target": "https://images.unsplash.com/photo-1494790108755-2616b612b5bc?w=512&h=512&fit=crop&crop=face"
+    "target": "https://storage.googleapis.com/mtask_storage/file-detect/20250706/15468408970710616.jpg"
 }
 
 
