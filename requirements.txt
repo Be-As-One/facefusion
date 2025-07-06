@@ -9,6 +9,7 @@ tqdm==4.67.1
 scipy==1.15.2
 # RunPod SDK
 runpod
+cryptography
 # Storage dependencies (optional)
 google-cloud-storage
 boto3
