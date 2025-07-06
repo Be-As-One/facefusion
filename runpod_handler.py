@@ -106,7 +106,7 @@ class FaceFusionConfig:
     
     # ⚡ 性能配置
     execution_device_id = '0'                        # GPU设备ID (0为第一个GPU，CPU则忽略)
-    execution_providers = ['cpu']                    # 运算提供商：cpu, cuda, tensorrt 等
+    execution_providers = ['cuda']                    # 运算提供商：cpu, cuda, tensorrt 等
     execution_thread_count = 1                       # 处理线程数 (1-8，根据CPU核心数调整)
     execution_queue_count = 1                        # 处理队列数
     
@@ -115,7 +115,7 @@ class FaceFusionConfig:
     download_scope = 'full'                          # 下载范围：lite(精简), full(完整)
     
     # 💾 内存配置  
-    video_memory_strategy = 'strict'                 # 显存策略：strict(严格), moderate(适中), tolerant(宽松)
+    video_memory_strategy = 'moderate'                 # 显存策略：strict(严格), moderate(适中), tolerant(宽松)
     system_memory_limit = 0                          # 系统内存限制(GB)，0为不限制
     
     # 📝 日志配置

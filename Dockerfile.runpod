@@ -63,10 +63,10 @@ RUN python3 install.py --onnxruntime cuda --skip-conda
 # 第三阶段：应用构建
 FROM dependencies AS application
 
-# 复制应用代码
+# 复制应用代码（包括 .git 目录以支持 LFS）
 COPY . .
 
-# 拉取 Git LFS 文件（模型文件）
+# 安装 Git LFS 并拉取模型文件
 RUN git lfs install && \
     git lfs pull && \
     echo "Git LFS files pulled successfully"
