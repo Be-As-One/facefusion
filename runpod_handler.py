@@ -22,6 +22,7 @@ import sys
 import tempfile
 import time
 import traceback
+from datetime import datetime
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -208,6 +209,16 @@ try:
     from storage import initialize_storage, get_storage_manager
     storage_manager = initialize_storage()
     logging.getLogger("存储管理器").info("✅ 存储管理器初始化成功")
+    
+    # 启动时清理过期文件（7天前的文件）
+    try:
+        if hasattr(storage_manager.get_provider(), 'cleanup_old_files'):
+            deleted_count = storage_manager.get_provider().cleanup_old_files(days=7)
+            if deleted_count > 0:
+                logging.getLogger("存储管理器").info(f"🧹 清理了 {deleted_count} 个过期文件")
+    except Exception as cleanup_error:
+        logging.getLogger("存储管理器").warning(f"⚠️ 文件清理失败: {str(cleanup_error)}")
+        
 except Exception as e:
     storage_manager = None
     logging.getLogger("存储管理器").warning(f"⚠️ 存储管理器初始化失败: {str(e)}")
@@ -438,7 +449,8 @@ class FaceFusionHandler:
 
     def process_request(self, source_url: str, target_url: str, 
                        resolution: str = "1024x1024",
-                       model: str = "inswapper_128_fp16") -> ProcessingResult:
+                       model: str = "inswapper_128_fp16",
+                       job_id: str = "unknown") -> ProcessingResult:
         """
         处理人脸交换请求
         
@@ -464,38 +476,52 @@ class FaceFusionHandler:
                 self.logger.info(f"   📋 输出分辨率: {resolution}")
                 self.logger.info(f"   🤖 使用模型: {model}")
                 
-                # 创建工作目录
-                work_dir = resource_manager.create_temp_dir("faceswap_")
+                # 创建按日期组织的目录结构
+                date_str = datetime.now().strftime("%Y%m%d")
+                upload_dir = f"/workspace/uploads/{date_str}"
+                result_dir = f"/workspace/results/{date_str}"
+                
+                # 确保目录存在
+                os.makedirs(upload_dir, exist_ok=True)
+                os.makedirs(result_dir, exist_ok=True)
                 
                 # 下载文件
                 self.logger.info("📥 开始下载输入图片...")
                 
                 try:
-                    # 使用 FaceFusion 下载源图片
-                    conditional_download(work_dir, [source_url])
+                    # 使用 FaceFusion 下载源图片到 uploads 目录
+                    conditional_download(upload_dir, [source_url])
+                    # 获取实际下载的文件名（与 conditional_download 逻辑一致）
                     source_filename = os.path.basename(urlparse(source_url).path)
-                    if not source_filename or '.' not in source_filename:
-                        source_filename = "source.jpg"
-                    source_path = os.path.join(work_dir, source_filename)
-                    self.logger.info(f"✅ 源图片下载成功: {source_filename}")
+                    source_path = os.path.join(upload_dir, source_filename)
+                    
+                    # 验证文件是否存在
+                    if not os.path.exists(source_path):
+                        raise FileNotFoundError(f"下载的源文件不存在: {source_path}")
+                    
+                    self.logger.info(f"✅ 源图片下载成功: {source_filename} -> {upload_dir}")
                 except Exception as e:
                     return ProcessingResult(status="失败", error=f"下载源图片失败: {str(e)}")
                 
                 try:
-                    # 使用 FaceFusion 下载目标图片
-                    conditional_download(work_dir, [target_url])
+                    # 使用 FaceFusion 下载目标图片到 uploads 目录
+                    conditional_download(upload_dir, [target_url])
+                    # 获取实际下载的文件名（与 conditional_download 逻辑一致）
                     target_filename = os.path.basename(urlparse(target_url).path)
-                    if not target_filename or '.' not in target_filename:
-                        target_filename = "target.jpg"
-                    target_path = os.path.join(work_dir, target_filename)
-                    self.logger.info(f"✅ 目标图片下载成功: {target_filename}")
+                    target_path = os.path.join(upload_dir, target_filename)
+                    
+                    # 验证文件是否存在
+                    if not os.path.exists(target_path):
+                        raise FileNotFoundError(f"下载的目标文件不存在: {target_path}")
+                    
+                    self.logger.info(f"✅ 目标图片下载成功: {target_filename} -> {upload_dir}")
                 except Exception as e:
                     return ProcessingResult(status="失败", error=f"下载目标图片失败: {str(e)}")
                 
-                # 准备输出路径
-                parsed_url = urlparse(target_url)
-                target_ext = os.path.splitext(parsed_url.path)[1] if '.' in parsed_url.path else '.jpg'
-                output_path = os.path.join(work_dir, f"output{target_ext}")
+                # 准备输出路径到 results 目录
+                timestamp = datetime.now().strftime("%H%M%S")
+                output_filename = f"{job_id}_{timestamp}_output.jpg"
+                output_path = os.path.join(result_dir, output_filename)
                 
                 # 执行人脸交换
                 result = process_face_swap(
@@ -607,7 +633,8 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
             source_url=source_url,
             target_url=target_url,
             resolution=resolution,
-            model=model
+            model=model,
+            job_id=job_id
         )
         
         # 准备响应

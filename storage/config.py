@@ -20,7 +20,7 @@ def get_env_int(key: str, default: int) -> int:
 # 存储配置
 storage_provider = os.getenv('STORAGE_PROVIDER', 'local')  # 'local', 'gcs', 'r2', 'cf_images'
 
-# 本地存储配置
+# 本地存储配置 - 使用按日期组织的 results 目录
 local_storage_path = os.getenv('LOCAL_STORAGE_PATH', '/workspace/results')
 
 # Google Cloud Storage 配置
