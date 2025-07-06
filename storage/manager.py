@@ -5,6 +5,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from .config import (
     storage_provider as default_storage_provider,
+    local_storage_path,
     bucket_name, 
     cdn_url,
     r2_bucket_name,
@@ -104,6 +105,7 @@ class StorageManager:
         logger.debug(f"配置的存储提供商: {default_storage_provider}")
 
         # 动态导入和配置提供商
+        self._configure_local(default_storage_provider)
         self._configure_gcs(default_storage_provider)
         self._configure_r2(default_storage_provider)
         self._configure_cf_images(default_storage_provider)
@@ -116,6 +118,18 @@ class StorageManager:
 
         self._initialized = True
         logger.info("✅ 存储管理器初始化完成")
+
+    def _configure_local(self, storage_provider: str):
+        """配置本地存储提供商"""
+        if storage_provider == 'local':
+            try:
+                from .providers.local import LocalProvider
+                logger.debug(f"配置本地存储路径: {local_storage_path}")
+                local_provider = LocalProvider(local_storage_path)
+                self.register_provider('local', local_provider, is_default=True)
+                logger.info("✅ 本地存储提供商已配置")
+            except Exception as e:
+                logger.warning(f"⚠️ 本地存储提供商配置失败: {e}")
 
     def _configure_gcs(self, storage_provider: str):
         """配置GCS提供商"""

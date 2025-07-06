@@ -18,7 +18,10 @@ def get_env_int(key: str, default: int) -> int:
 
 
 # 存储配置
-storage_provider = os.getenv('STORAGE_PROVIDER', 'gcs')  # 'gcs', 'r2', 'cf_images'
+storage_provider = os.getenv('STORAGE_PROVIDER', 'local')  # 'local', 'gcs', 'r2', 'cf_images'
+
+# 本地存储配置
+local_storage_path = os.getenv('LOCAL_STORAGE_PATH', '/workspace/results')
 
 # Google Cloud Storage 配置
 bucket_name = os.getenv('GCS_BUCKET_NAME', '')
