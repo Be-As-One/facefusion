@@ -68,14 +68,15 @@ COPY . .
 # 初始化 git submodules（如果有的话）
 RUN git submodule init && git submodule update --recursive || echo "No submodules found"
 
-# 创建必要的目录
+# 创建必要的目录（不包括 .assets/models，因为已由 COPY 复制）
 RUN mkdir -p /app/logs \
-    && mkdir -p /app/temp \
-    && mkdir -p /app/.assets/models
+    && mkdir -p /app/temp
 
 # 验证预打包的模型文件存在
 RUN echo "Verifying pre-packaged model files..." && \
     ls -la /app/.assets/models/ && \
+    echo "Found $(ls -1 /app/.assets/models/*.onnx 2>/dev/null | wc -l) ONNX model files" && \
+    du -sh /app/.assets/models/ && \
     echo "Model files verification completed"
 
 # 设置权限
