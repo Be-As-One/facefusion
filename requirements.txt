@@ -9,7 +9,7 @@ tqdm==4.67.1
 scipy==1.15.2
 # RunPod SDK
 runpod
-# FastAPI 存储依赖
-loguru
+# Storage dependencies (optional)
 google-cloud-storage
 boto3
+requests

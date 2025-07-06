@@ -43,8 +43,11 @@ os.environ.update({
 try:
     import runpod
     RUNPOD_AVAILABLE = True
-except ImportError:
+    print("✅ RunPod SDK 导入成功")
+except ImportError as e:
     RUNPOD_AVAILABLE = False
+    print(f"❌ RunPod SDK 导入失败: {e}")
+    print("💡 如果在 Docker 容器中，请确保 requirements.txt 中包含 runpod")
 
 # 项目路径设置
 PROJECT_ROOT = Path(__file__).parent
@@ -197,35 +200,18 @@ class ProcessingResult:
 
 
 # ============================================================================
-# 存储上传功能（使用 fastapi 的存储模块）
+# 存储管理器初始化
 # ============================================================================
 
-def get_storage_manager():
-    """获取存储管理器"""
-    try:
-        # 使用 fastapi 的存储管理器
-        fastapi_path = Path(__file__).parent / 'fastapi'
-        if not fastapi_path.exists():
-            logging.getLogger("存储管理器").warning("⚠️ fastapi 目录不存在，跳过存储管理器初始化")
-            return None
-            
-        sys.path.insert(0, str(fastapi_path))
-        
-        # 导入并执行初始化函数
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("main", fastapi_path / "main.py")
-        main_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(main_module)
-        
-        # 初始化存储管理器
-        return main_module.init_storage()
-    except Exception as e:
-        logging.getLogger("存储管理器").warning(f"⚠️ 存储管理器初始化失败: {str(e)}")
-        return None
-
-
 # 初始化存储管理器
-storage_manager = get_storage_manager()
+try:
+    from storage import initialize_storage, get_storage_manager
+    storage_manager = initialize_storage()
+    logging.getLogger("存储管理器").info("✅ 存储管理器初始化成功")
+except Exception as e:
+    storage_manager = None
+    logging.getLogger("存储管理器").warning(f"⚠️ 存储管理器初始化失败: {str(e)}")
+    logging.getLogger("存储管理器").warning("📝 将在本地模式下运行，不支持文件上传")
 
 
 # ============================================================================
