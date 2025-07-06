@@ -30,7 +30,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3 /usr/bin/python
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.12 100 \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 100 \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python
 
 # 设置工作目录
 WORKDIR /app
