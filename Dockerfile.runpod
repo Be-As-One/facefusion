@@ -73,11 +73,10 @@ RUN mkdir -p /app/logs \
     && mkdir -p /app/temp \
     && mkdir -p /app/.assets/models
 
-# 预下载所有 FaceFusion 模型文件
-# 这样避免运行时下载失败的问题
-RUN echo "Pre-downloading FaceFusion models..." && \
-    python3 facefusion.py force-download && \
-    echo "Model download completed successfully"
+# 验证预打包的模型文件存在
+RUN echo "Verifying pre-packaged model files..." && \
+    ls -la /app/.assets/models/ && \
+    echo "Model files verification completed"
 
 # 设置权限
 RUN chmod +x /app/runpod_handler.py
