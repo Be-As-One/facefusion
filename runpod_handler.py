@@ -205,13 +205,20 @@ def get_storage_manager():
     try:
         # 使用 fastapi 的存储管理器
         fastapi_path = Path(__file__).parent / 'fastapi'
+        if not fastapi_path.exists():
+            logging.getLogger("存储管理器").warning("⚠️ fastapi 目录不存在，跳过存储管理器初始化")
+            return None
+            
         sys.path.insert(0, str(fastapi_path))
         
         # 导入并执行初始化函数
-        import main
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("main", fastapi_path / "main.py")
+        main_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(main_module)
         
         # 初始化存储管理器
-        return main.init_storage()
+        return main_module.init_storage()
     except Exception as e:
         logging.getLogger("存储管理器").warning(f"⚠️ 存储管理器初始化失败: {str(e)}")
         return None

@@ -48,8 +48,7 @@ COPY requirements.txt .
 
 # 安装 Python 依赖
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    python3 -m pip install --no-cache-dir -r requirements.txt && \
-    python3 -m pip install runpod
+    python3 -m pip install --no-cache-dir -r requirements.txt
 
 # 安装 ONNX Runtime CUDA 版本
 COPY install.py .
