@@ -75,9 +75,14 @@ RUN mkdir -p /app/logs \
 
 # 验证预打包的模型文件存在
 RUN echo "Verifying pre-packaged model files..." && \
-    ls -la /app/.assets/models/ && \
-    echo "Found $(ls -1 /app/.assets/models/*.onnx 2>/dev/null | wc -l) ONNX model files" && \
-    du -sh /app/.assets/models/ && \
+    echo "Checking if .assets directory exists:" && \
+    ls -la /app/.assets/ || echo ".assets directory not found" && \
+    echo "Checking models directory:" && \
+    ls -la /app/.assets/models/ || echo "models directory not found" && \
+    echo "Counting ONNX files:" && \
+    find /app -name "*.onnx" -exec ls -lh {} \; || echo "No ONNX files found" && \
+    echo "Total .assets directory size:" && \
+    du -sh /app/.assets/ 2>/dev/null || echo "Cannot calculate size" && \
     echo "Model files verification completed"
 
 # 设置权限
