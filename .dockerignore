@@ -1,6 +1,5 @@
-# Model files will be pulled via Git LFS during build
-# .assets/models/*.onnx
-# .assets/models/*.hash
+# Model files are included (pre-pulled by GitHub Actions LFS checkout)
+# No need to exclude these anymore
 
 # Python cache
 __pycache__/
@@ -25,8 +24,8 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Git (keep .git for LFS, exclude others)
-# .git/
+# Git (exclude .git to save space, models pre-pulled)
+.git/
 .gitignore
 .gitattributes
 
