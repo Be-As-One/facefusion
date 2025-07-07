@@ -108,9 +108,9 @@ def pre_check() -> bool:
 		logger.error(wording.get('curl_not_installed'), __name__)
 		return False
 
-	if not shutil.which('ffmpeg'):
-		logger.error(wording.get('ffmpeg_not_installed'), __name__)
-		return False
+	# if not shutil.which('ffmpeg'):
+	# 	logger.error(wording.get('ffmpeg_not_installed'), __name__)
+	# 	return False
 	return True
 
 
