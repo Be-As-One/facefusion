@@ -48,7 +48,7 @@ class ProcessRequestAPI(BaseModel):
     """Face swap processing request for FastAPI"""
     source_url: str = Field(..., description="URL of the source image (face to swap)")
     target_url: str = Field(..., description="URL of the target image/video")
-    resolution: str = Field("1024x1024", description="Output resolution")
+    resolution: str = Field("auto", description="Output resolution (e.g., '1024x1024' or 'auto' for original)")
     model: str = Field("inswapper_128_fp16", description="Face swapper model to use")
 
 

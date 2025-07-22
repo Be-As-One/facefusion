@@ -8,6 +8,7 @@ from facefusion.filesystem import is_image, is_video
 from facefusion.download import conditional_download
 from facefusion.core import conditional_process
 from facefusion import state_manager
+from facefusion.vision import detect_image_resolution, detect_video_resolution
 import os
 import sys
 import time
@@ -89,8 +90,16 @@ def headless_conditional_process(sources, target, output, resolution, face_swapp
     state_manager.set_item('source_paths', sources)
     state_manager.set_item('target_path', target)
     state_manager.set_item('output_path', output)
-    state_manager.set_item('output_image_resolution', resolution)
-    state_manager.set_item('output_video_resolution', resolution)
+    
+    # Only set resolution if specified (not None)
+    if resolution:
+        state_manager.set_item('output_image_resolution', resolution)
+        state_manager.set_item('output_video_resolution', resolution)
+    else:
+        # Clear resolution settings to use original
+        state_manager.set_item('output_image_resolution', None)
+        state_manager.set_item('output_video_resolution', None)
+        
     if face_swapper_model:
         state_manager.set_item('face_swapper_model', face_swapper_model)
     
@@ -152,8 +161,17 @@ def headless_conditional_process(sources, target, output, resolution, face_swapp
         raise Exception("Critical error: processors configuration not loaded")
     
     # Process
-    error_code = conditional_process()
-    return error_code
+    logger.info(f"Starting conditional_process...")
+    logger.info(f"DISABLE_NSFW_CHECK={os.environ.get('DISABLE_NSFW_CHECK', 'not set')}")
+    
+    try:
+        error_code = conditional_process()
+        logger.info(f"conditional_process returned: {error_code}")
+        return error_code
+    except Exception as e:
+        logger.error(f"Exception in conditional_process: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise
 
 
 # ============================================================================
@@ -260,13 +278,32 @@ class FaceFusionManager:
             output_filename = f"{job_id}_output{target_ext}"
             output_path = os.path.join(temp_dir, output_filename)
             
+            # Detect original resolution if requested
+            resolution = request.resolution
+            if resolution == "auto":
+                if is_image(target_path):
+                    detected_resolution = detect_image_resolution(target_path)
+                    if detected_resolution:
+                        resolution = f"{detected_resolution[0]}x{detected_resolution[1]}"
+                        logger.info(f"Detected image resolution: {resolution}")
+                elif is_video(target_path):
+                    detected_resolution = detect_video_resolution(target_path)
+                    if detected_resolution:
+                        resolution = f"{detected_resolution[0]}x{detected_resolution[1]}"
+                        logger.info(f"Detected video resolution: {resolution}")
+                
+                # If detection fails, use a default
+                if resolution == "auto":
+                    resolution = None  # Let FaceFusion use its default
+                    logger.info("Using FaceFusion default resolution")
+            
             # Process face swap
             logger.info(f"Starting face swap processing for job {job_id}")
             error_code = headless_conditional_process(
                 sources=[source_path],
                 target=target_path,
                 output=output_path,
-                resolution=request.resolution,
+                resolution=resolution,
                 face_swapper_model=request.model
             )
             
@@ -293,6 +330,7 @@ class FaceFusionManager:
                 )
             else:
                 error_msg = f"Processing failed with error code: {error_code}"
+                logger.error(error_msg)
                 raise Exception(error_msg)
                 
         except Exception as e:

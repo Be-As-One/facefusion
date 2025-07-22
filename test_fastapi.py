@@ -9,8 +9,13 @@ import time
 import sys
 
 
-def test_face_swap(base_url: str = "http://localhost:8000"):
-    """Test face swap processing"""
+def test_face_swap(base_url: str = "http://localhost:8000", resolution: str = "auto"):
+    """Test face swap processing
+    
+    Args:
+        base_url: API base URL
+        resolution: Output resolution (e.g. '512x512', '1024x1024' or 'auto' for original)
+    """
     print("🎭 Testing FaceFusion API face swap...")
     
     # Test data
@@ -18,7 +23,7 @@ def test_face_swap(base_url: str = "http://localhost:8000"):
         "source_url": "https://cdn.deepswaper.net/deepswaper/before.png",
         # "target_url": "https://storage.googleapis.com/temp-test-file/20250707-190214.mp4",
          "target_url": "https://cdn.deepswaper.net/deepswaper/after.png",
-        "resolution": "512x512",
+        "resolution": resolution,
         "model": "inswapper_128_fp16"
     }
     
@@ -60,8 +65,13 @@ def test_face_swap(base_url: str = "http://localhost:8000"):
 def main():
     """Main test function"""
     base_url = "http://localhost:8000"
+    resolution = "auto"
+    
+    # Parse command line arguments
     if len(sys.argv) > 1:
         base_url = sys.argv[1]
+    if len(sys.argv) > 2:
+        resolution = sys.argv[2]
     
     print(f"🔗 Testing API at: {base_url}")
     
@@ -78,9 +88,13 @@ def main():
     
     # Run face swap test
     print("\n" + "="*50)
-    result = test_face_swap(base_url)
+    result = test_face_swap(base_url, resolution)
     print("="*50)
     print(f"Test result: {result['status']}")
+    
+    if len(sys.argv) == 1:
+        print("\n💡 Usage: python test_fastapi.py [base_url] [resolution]")
+        print("   resolution can be 'auto', '512x512', '1024x1024', etc.")
 
 
 if __name__ == "__main__":

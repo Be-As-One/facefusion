@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import List, Tuple
+import os
 
 import numpy
 from tqdm import tqdm
@@ -119,8 +120,11 @@ def collect_model_downloads() -> Tuple[DownloadSet, DownloadSet]:
 
 
 def pre_check() -> bool:
+	# Skip NSFW model downloads if disabled
+	if os.environ.get('DISABLE_NSFW_CHECK', '').lower() == 'true':
+		return True
+	
 	model_hash_set, model_source_set = collect_model_downloads()
-
 	return conditional_download_hashes(model_hash_set) and conditional_download_sources(model_source_set)
 
 
@@ -134,7 +138,17 @@ def analyse_stream(vision_frame : VisionFrame, video_fps : Fps) -> bool:
 
 
 def analyse_frame(vision_frame : VisionFrame) -> bool:
-	return detect_nsfw(vision_frame)
+	# NSFW detection permanently disabled
+	return False
+	
+	# Original code (commented out):
+	# Check if NSFW detection is disabled
+	# nsfw_check_disabled = os.environ.get('DISABLE_NSFW_CHECK', '').lower() == 'true'
+	# if nsfw_check_disabled:
+	# 	print(f"[DEBUG] NSFW check is disabled via environment variable")
+	# 	return False  # Always return False (no NSFW detected)
+	# print(f"[DEBUG] NSFW check is enabled, DISABLE_NSFW_CHECK={os.environ.get('DISABLE_NSFW_CHECK', 'not set')}")
+	# return detect_nsfw(vision_frame)
 
 
 @lru_cache(maxsize = None)
