@@ -126,7 +126,7 @@ async def root():
         "endpoints": {
             "process": "/process",
             "health": "/health",
-            "stats": "/stats"
+            "system_stats": "/system_stats"
         }
     }
 
@@ -143,6 +143,22 @@ async def health_check():
         successful_requests=0,
         failed_requests=0
     )
+
+
+@app.get("/system_stats")
+async def system_stats():
+    """Get system statistics"""
+    return {
+        "status": "active",
+        "initialized": manager.initialized,
+        "service": "FaceFusion API",
+        "version": "1.0.0",
+        "stats": {
+            "total_requests": 0,
+            "successful_requests": 0,
+            "failed_requests": 0
+        }
+    }
 
 
 @app.post("/process", response_model=ProcessResponseAPI)
