@@ -1,0 +1,48 @@
+# Model files are included (pre-pulled by GitHub Actions LFS checkout)
+# No need to exclude these anymore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git (exclude .git to save space, models pre-pulled)
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# Tests
+tests/
+test_*.py
+
+# Temporary files
+temp/
+logs/
+*.log
+
+# Build artifacts
+build/
+dist/
+*.egg-info/

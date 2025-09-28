@@ -1,0 +1,22 @@
+{
+  "mappings": [
+    {
+      "source_path": "./person1_new.jpg",
+      "reference_path": "./person1_ref.jpg",
+      "similarity_threshold": 0.3,
+      "enabled": true
+    },
+    {
+      "source_path": "./person2_new.jpg",
+      "reference_path": "./person2_ref.jpg",
+      "similarity_threshold": 0.3,
+      "enabled": true
+    },
+    {
+      "source_path": "./person3_new.jpg",
+      "reference_path": "./person3_ref.jpg",
+      "similarity_threshold": 0.3,
+      "enabled": true
+    }
+  ]
+}

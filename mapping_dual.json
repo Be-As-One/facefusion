@@ -1,0 +1,16 @@
+{
+  "mappings": [
+    {
+      "source_path": "./face_1_update.jpg",
+      "reference_path": "./face_1.jpg",
+      "similarity_threshold": 0.3,
+      "enabled": true
+    },
+    {
+      "source_path": "./face_2_update.webp",
+      "reference_path": "./face_2.jpg",
+      "similarity_threshold": 0.3,
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+# RunPod Serverless Dockerfile for FaceFusion
+# 优化的多阶段构建，减少镜像大小并提高性能
+
+# 第一阶段：基础环境（使用 RunPod 的 CUDA 镜像）
+FROM runpod/base:0.6.3-cuda12.4.1 AS base
+
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    python3.12 \
+    python3-pip \
+    gcc \
+    g++ \
+    make \
+    libc6-dev \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgoogle-perftools4 \
+    libtcmalloc-minimal4 \
+    ffmpeg \
+    wget \
+    curl \
+    git \
+    # cryptography 依赖
+    libssl-dev \
+    libffi-dev \
+    python3.12-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.12 100 \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 100 \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python
+
+# 设置工作目录
+WORKDIR /app
+
+# 第二阶段：依赖安装
+FROM base AS dependencies
+
+# 确保 python 命令可用
+RUN ln -sf /usr/bin/python3 /usr/bin/python || true
+
+# 复制依赖文件
+COPY requirements.txt .
+
+# 安装 Python 依赖
+RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    python3 -m pip install --no-cache-dir -r requirements.txt
+
+# 安装 ONNX Runtime CUDA 版本
+COPY install.py .
+COPY facefusion facefusion
+RUN python3 install.py --onnxruntime cuda --skip-conda
+
+# 第三阶段：应用构建
+FROM dependencies AS application
+
+# 复制应用代码（包括预拉取的模型文件）
+# 重要：构建前必须在主机上运行 'git lfs pull' 来下载实际的模型文件
+# 确保 .onnx 文件是实际文件而不是 LFS 指针
+COPY . .
+
+# 初始化 git submodules（如果有的话）
+RUN git submodule init && git submodule update --recursive || echo "No submodules found"
+
+# 创建必要的目录（不包括 .assets/models，因为已由 COPY 复制）
+RUN mkdir -p /app/logs \
+    && mkdir -p /app/temp
+
+# 验证预打包的模型文件存在
+RUN echo "Verifying pre-packaged model files..." && \
+    echo "Checking if .assets directory exists:" && \
+    ls -la /app/.assets/ || echo ".assets directory not found" && \
+    echo "Checking models directory:" && \
+    ls -la /app/.assets/models/ || echo "models directory not found" && \
+    echo "Counting ONNX files:" && \
+    find /app -name "*.onnx" -exec ls -lh {} \; || echo "No ONNX files found" && \
+    echo "Total .assets directory size:" && \
+    du -sh /app/.assets/ 2>/dev/null || echo "Cannot calculate size" && \
+    echo "Model files verification completed"
+
+# 设置权限
+RUN chmod +x /app/runpod_handler.py
+
+# 优化内存使用
+ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4
+ENV MALLOC_CONF=background_thread:true,metadata_thp:auto,dirty_decay_ms:30000,muzzy_decay_ms:30000
+
+# 设置 RunPod 环境变量
+ENV RUNPOD_HANDLER_PATH="/app/runpod_handler.py"
+ENV MAX_CONCURRENCY=3
+ENV PYTHONPATH="/app:${PYTHONPATH:-}"
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD python -c "from runpod_handler import health_check; print(health_check())"
+
+# 暴露端口（RunPod 会自动处理）
+EXPOSE 8000
+
+# 启动 RunPod Handler
+CMD ["python3", "runpod_handler.py"]

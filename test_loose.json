@@ -1,0 +1,74 @@
+{
+  "video_path": "test/2.mp4",
+  "video_info": {
+    "width": 1080,
+    "height": 486,
+    "fps": 53.90326392742487,
+    "total_frames": 558
+  },
+  "detection_settings": {
+    "model": "yolo_face",
+    "threshold": 0.5,
+    "mode": "many",
+    "sample_interval": 30,
+    "frames_processed": 6,
+    "face_distance_threshold": 0.6
+  },
+  "statistics": {
+    "total_detections": 6,
+    "unique_persons": 1,
+    "frames_with_faces": 6,
+    "max_faces_per_frame": 1,
+    "average_faces_per_frame": 1.0
+  },
+  "persons": {
+    "person_1": {
+      "gender": "female",
+      "age": "20-28",
+      "race": "white",
+      "first_frame": 0,
+      "last_frame": 150,
+      "total_appearances": 6,
+      "duration_frames": 150,
+      "duration_seconds": 2.78276284348865
+    }
+  },
+  "frame_data": {
+    "0": {
+      "face_count": 1,
+      "person_ids": [
+        "person_1"
+      ]
+    },
+    "30": {
+      "face_count": 1,
+      "person_ids": [
+        "person_1"
+      ]
+    },
+    "60": {
+      "face_count": 1,
+      "person_ids": [
+        "person_1"
+      ]
+    },
+    "90": {
+      "face_count": 1,
+      "person_ids": [
+        "person_1"
+      ]
+    },
+    "120": {
+      "face_count": 1,
+      "person_ids": [
+        "person_1"
+      ]
+    },
+    "150": {
+      "face_count": 1,
+      "person_ids": [
+        "person_1"
+      ]
+    }
+  }
+}

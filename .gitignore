@@ -1,0 +1,10 @@
+__pycache__
+.caches
+.jobs
+.idea
+.vscode
+.DS_Store
+outputs/*
+inputs/*
+.DS_Store
+venv

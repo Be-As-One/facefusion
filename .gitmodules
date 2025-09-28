@@ -1,0 +1,3 @@
+[submodule "fastapi"]
+	path = fastapi
+	url = git@github.com:hzeyuan/comfyui-fastapi.git
